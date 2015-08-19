@@ -22,7 +22,7 @@ If you are brave and want to give it a go, I have written it in such a way that 
 
 Include the JavaScript files in the following order:
 
-1. odatajs-4.0.0-beta-01.js*
+1. odatajs-4.0.0.js*
 2. breeze.js
 3. breezeOdataV4Adapter.js
 
@@ -41,7 +41,7 @@ the Olingo implementation of the protocol, or some oversight on my part in how t
 ## Progress
 
 So far, in my limited testing, I have the following features working:
-
+- Metadata
 - Queries (`breeze.EntityQuery()`) with filtering (`where()`) and eager loading (`expand()`)
 - Batch inserts/updates (`entityManager.saveChanges()`)
 

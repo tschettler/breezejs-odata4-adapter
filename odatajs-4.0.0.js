@@ -15,37 +15,40 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
- * !! Modified by Michael Bromley on line 2089
  */
- (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var init = function(exports, module, require) {
+  
+
+// version information 
+exports.version = { major: 4, minor: 0, build: 0 };
+
+// core stuff, always needed
+exports.deferred = require('./lib/deferred.js');
+exports.utils = require('./lib/utils.js');
+
+// only needed for xml metadata 
+exports.xml = require('./lib/xml.js');
+
+// only need in browser case
+exports.oData = require('./lib/odata.js');
+exports.store = require('./lib/store.js');
+exports.cache = require('./lib/cache.js');
 
 
-var odatajs = require('./lib/odatajs.js');
 
-odatajs.oData = require('./lib/odata.js');
-odatajs.store = require('./lib/store.js');
-odatajs.cache = require('./lib/cache.js');
 
-if (typeof window !== 'undefined') {
-    //expose to browsers window object
-    window.odatajs = odatajs;
-} else {
-    //expose in commonjs style
-    odatajs.node = "node";
-    module.exports = odatajs;
-}
+};
 
-},{"./lib/cache.js":2,"./lib/odata.js":4,"./lib/odatajs.js":11,"./lib/store.js":15}],2:[function(require,module,exports){
-
+var datas = {"cache" : function(exports, module, require) {
+'use strict';
 
  /** @module cache */
 
-var odatajs = require('./odatajs.js');
-var utils = odatajs.utils;
-var deferred = odatajs.deferred;
-var storeReq = odatajs.store;
-var cacheSource = require('./cache/source');
+//var odatajs = require('./odatajs/utils.js');
+var utils =  require('./utils.js');
+var deferred = require('./deferred.js');
+var storeReq = require('./store.js');
+var cacheSource = require('./cache/source.js');
 
 
 var assigned = utils.assigned;
@@ -169,7 +172,7 @@ function removeFromArray(arr, item) {
 /** Estimates the size of an object in bytes.
  * Object trees are traversed recursively
  * @param {Object} object - Object to determine the size of.
- * @returns {Integer} Estimated size of the object in bytes.
+ * @returns {Number} Estimated size of the object in bytes.
  */
 function estimateSize(object) {
     var size = 0;
@@ -238,16 +241,7 @@ var READ_STATE_SOURCE = "source";
  */
 function DataCacheOperation(stateMachine, promise, isCancelable, index, count, data, pending) {
 
-    /// <field name="p" type="DjsDeferred">Promise for requested values.</field>
-    /// <field name="i" type="Number">Index of first item requested.</field>
-    /// <field name="c" type="Number">Count of items requested.</field>
-    /// <field name="d" type="Array">Array with the items requested by the operation.</field>
-    /// <field name="s" type="Array">Current state of the operation.</field>
-    /// <field name="canceled" type="Boolean">Whether the operation has been canceled.</field>
-    /// <field name="pending" type="Number">Total number of pending prefetch records.</field>
-    /// <field name="oncomplete" type="Function">Callback executed when the operation reaches the end state.</field>
-
-    var stateData;
+   var stateData;
     var cacheState;
     var that = this;
 
@@ -262,7 +256,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
     that.oncomplete = null;
 
     /** Transitions this operation to the cancel state and sets the canceled flag to true.
-     * The function is a no-op if the operation is non-cancelable.</summary>
+     * The function is a no-op if the operation is non-cancelable.
      * @method DataCacheOperation#cancel
      */
     that.cancel = function cancel() {
@@ -274,7 +268,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
         var state = that.s;
         if (state !== OPERATION_STATE_ERROR && state !== OPERATION_STATE_END && state !== OPERATION_STATE_CANCEL) {
             that.canceled = true;
-            transition(OPERATION_STATE_CANCEL, stateData);
+            that.transition(OPERATION_STATE_CANCEL, stateData);
         }
     };
 
@@ -284,7 +278,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
     that.complete = function () {
 
         djsassert(that.s !== OPERATION_STATE_END, "DataCacheOperation.complete() - operation is in the end state", that);
-        transition(OPERATION_STATE_END, stateData);
+        that.transition(OPERATION_STATE_END, stateData);
     };
 
     /** Transitions this operation to the error state.
@@ -294,7 +288,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
         if (!that.canceled) {
             djsassert(that.s !== OPERATION_STATE_END, "DataCacheOperation.error() - operation is in the end state", that);
             djsassert(that.s !== OPERATION_STATE_ERROR, "DataCacheOperation.error() - operation is in the error state", that);
-            transition(OPERATION_STATE_ERROR, err);
+            that.transition(OPERATION_STATE_ERROR, err);
         }
     };
 
@@ -314,7 +308,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
     that.wait = function (data) {
 
         djsassert(that.s !== OPERATION_STATE_END, "DataCacheOperation.wait() - operation is in the end state", that);
-        transition(OPERATION_STATE_WAIT, data);
+        that.transition(OPERATION_STATE_WAIT, data);
     };
 
     /** State machine that describes all operations common behavior.
@@ -342,7 +336,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
                 // Cancel state.
                 stateMachine(that, opTargetState, cacheState, data);
                 that.fireCanceled();
-                transition(OPERATION_STATE_END);
+                that.transition(OPERATION_STATE_END);
                 break;
 
             case OPERATION_STATE_ERROR:
@@ -350,7 +344,7 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
                 stateMachine(that, opTargetState, cacheState, data);
                 that.canceled = true;
                 that.fireRejected(data);
-                transition(OPERATION_STATE_END);
+                that.transition(OPERATION_STATE_END);
                 break;
 
             case OPERATION_STATE_END:
@@ -366,17 +360,17 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
 
             default:
                 // Any other state is passed down to the state machine describing the operation's specific behavior.
-                // DATAJS INTERNAL START 
+
                 if (true) {
                     // Check that the state machine actually handled the sate.
                     var handled = stateMachine(that, opTargetState, cacheState, data);
                     djsassert(handled, "Bad operation state: " + opTargetState + " cacheState: " + cacheState, this);
                 } else {
-                    // DATAJS INTERNAL END 
+
                     stateMachine(that, opTargetState, cacheState, data);
-                    // DATAJS INTERNAL START
+
                 }
-                // DATAJS INTERNAL END
+
                 break;
         }
     };
@@ -388,13 +382,11 @@ function DataCacheOperation(stateMachine, promise, isCancelable, index, count, d
      * @param {Object} state - State to transition the operation to.
      * @param {Object} [data] - 
      */
-    var transition = function (state, data) {
+    that.transition = function (state, data) {
         that.s = state;
         stateData = data;
         operationStateMachine(state, cacheState, data);
     };
-    
-    that.transition = transition;
     
     return that;
 }
@@ -621,6 +613,7 @@ function DataCache(options) {
             throw cacheFailure;
         }
 
+        //return window.Rx.Observable.create(function (obs) {
         return new window.Rx.Observable(function (obs) {
             var disposed = false;
             var index = 0;
@@ -637,10 +630,12 @@ function DataCache(options) {
                     for (i = 0, len = data.value.length; i < len; i++) {
                         // The wrapper automatically checks for Dispose
                         // on the observer, so we don't need to check it here.
+                        //obs.next(data.value[i]);
                         obs.onNext(data.value[i]);
                     }
 
                     if (data.value.length < pageSize) {
+                        //obs.completed();
                         obs.onCompleted();
                     } else {
                         index += pageSize;
@@ -692,7 +687,7 @@ function DataCache(options) {
     /** Updates the cache's state and signals all pending operations of the change.
      * @method DataCache~changeState
      * @param {Object} newState - New cache state.
-     * This method is a no-op if the cache's current state and the new state are the same.</remarks>
+     * This method is a no-op if the cache's current state and the new state are the same.
      */
     var changeState = function (newState) {
 
@@ -741,7 +736,7 @@ function DataCache(options) {
     /** Removes an operation from the caches queues and changes the cache state to idle.
      * @method DataCache~dequeueOperation
      * @param {DataCacheOperation} operation - Operation to dequeue.
-     * This method is used as a handler for the operation's oncomplete event.</remarks>
+     * This method is used as a handler for the operation's oncomplete event.
     */
     var dequeueOperation = function (operation) {
 
@@ -1036,7 +1031,6 @@ function DataCache(options) {
     /** Creates a function that handles a store error.
      * @method DataCache~storeFailureCallback    
      * @param {DjsDeferred} deferred - Deferred object to resolve.
-     * @param {String} message - Message text.
      * @returns {Function} Function to use as error callback.
     
      * This function will specifically handle problems when interacting with the store.
@@ -1470,12 +1464,15 @@ exports.estimateSize = estimateSize;
 
 /** createDataCache */  
 exports.createDataCache = createDataCache;
-},{"./cache/source":3,"./odatajs.js":11}],3:[function(require,module,exports){
 
+
+
+}, "source" : function(exports, module, require) {
+'use strict';
 
  /** @module cache/source */
  
-var utils = require("./../odatajs.js").utils;
+var utils = require("./../utils.js");
 var odataRequest = require("./../odata.js");
 
 var parseInt10 = utils.parseInt10;
@@ -1556,8 +1553,7 @@ function findQueryOptionStart(uri, name) {
  * @returns {Object} Object with an abort method.
  */
 function queryForData (uri, options, success, error) {
-    var request = queryForDataInternal(uri, options, {}, success, error);
-    return request;
+    return queryForDataInternal(uri, options, {}, success, error);
 }
 
 /** Gets data from an OData service taking into consideration server side paging.
@@ -1659,14 +1655,185 @@ function ODataCacheSource (options) {
 
 
 /** ODataCacheSource (see {@link ODataCacheSource}) */
-exports.ODataCacheSource = ODataCacheSource;
-},{"./../odata.js":4,"./../odatajs.js":11}],4:[function(require,module,exports){
+exports.ODataCacheSource = ODataCacheSource;}, "deferred" : function(exports, module, require) {
+'use strict';
 
+/** @module odatajs/deferred */
+
+
+
+/** Creates a new function to forward a call.
+ * @param {Object} thisValue - Value to use as the 'this' object.
+ * @param {String} name - Name of function to forward to.
+ * @param {Object} returnValue - Return value for the forward call (helps keep identity when chaining calls).
+ * @returns {Function} A new function that will forward a call.
+ */
+function forwardCall(thisValue, name, returnValue) {
+    return function () {
+        thisValue[name].apply(thisValue, arguments);
+        return returnValue;
+    };
+}
+
+/** Initializes a new DjsDeferred object.
+ * <ul>
+ * <li> Compability Note A - Ordering of callbacks through chained 'then' invocations <br>
+ *
+ * The Wiki entry at http://wiki.commonjs.org/wiki/Promises/A
+ * implies that .then() returns a distinct object.
+ *
+ * For compatibility with http://api.jquery.com/category/deferred-object/
+ * we return this same object. This affects ordering, as
+ * the jQuery version will fire callbacks in registration
+ * order regardless of whether they occur on the result
+ * or the original object.
+ * </li>
+ * <li>Compability Note B - Fulfillment value <br>
+ *
+ * The Wiki entry at http://wiki.commonjs.org/wiki/Promises/A
+ * implies that the result of a success callback is the
+ * fulfillment value of the object and is received by
+ * other success callbacks that are chained.
+ *
+ * For compatibility with http://api.jquery.com/category/deferred-object/
+ * we disregard this value instead.
+ * </li></ul>
+ * @class DjsDeferred 
+ */
+ function DjsDeferred() {
+    this._arguments = undefined;
+    this._done = undefined;
+    this._fail = undefined;
+    this._resolved = false;
+    this._rejected = false;
+}
+
+
+DjsDeferred.prototype = {
+
+    /** Adds success and error callbacks for this deferred object.
+     * See Compatibility Note A.
+     * @method DjsDeferred#then
+     * @param {function} [fulfilledHandler] - Success callback ( may be null)
+     * @param {function} [errorHandler] - Error callback ( may be null)
+     */
+    then: function (fulfilledHandler, errorHandler) {
+
+        if (fulfilledHandler) {
+            if (!this._done) {
+                this._done = [fulfilledHandler];
+            } else {
+                this._done.push(fulfilledHandler);
+            }
+        }
+
+        if (errorHandler) {
+            if (!this._fail) {
+                this._fail = [errorHandler];
+            } else {
+                this._fail.push(errorHandler);
+            }
+        }
+
+        //// See Compatibility Note A in the DjsDeferred constructor.
+        //// if (!this._next) {
+        ////    this._next = createDeferred();
+        //// }
+        //// return this._next.promise();
+
+        if (this._resolved) {
+            this.resolve.apply(this, this._arguments);
+        } else if (this._rejected) {
+            this.reject.apply(this, this._arguments);
+        }
+
+        return this;
+    },
+
+    /** Invokes success callbacks for this deferred object.
+     * All arguments are forwarded to success callbacks.
+     * @method DjsDeferred#resolve
+     */
+    resolve: function (/* args */) {
+        if (this._done) {
+            var i, len;
+            for (i = 0, len = this._done.length; i < len; i++) {
+                //// See Compability Note B - Fulfillment value.
+                //// var nextValue =
+                this._done[i].apply(null, arguments);
+            }
+
+            //// See Compatibility Note A in the DjsDeferred constructor.
+            //// this._next.resolve(nextValue);
+            //// delete this._next;
+
+            this._done = undefined;
+            this._resolved = false;
+            this._arguments = undefined;
+        } else {
+            this._resolved = true;
+            this._arguments = arguments;
+        }
+    },
+
+    /** Invokes error callbacks for this deferred object.
+     * All arguments are forwarded to error callbacks.
+     * @method DjsDeferred#reject
+     */
+    reject: function (/* args */) {
+        
+        if (this._fail) {
+            var i, len;
+            for (i = 0, len = this._fail.length; i < len; i++) {
+                this._fail[i].apply(null, arguments);
+            }
+
+            this._fail = undefined;
+            this._rejected = false;
+            this._arguments = undefined;
+        } else {
+            this._rejected = true;
+            this._arguments = arguments;
+        }
+    },
+
+    /** Returns a version of this object that has only the read-only methods available.
+     * @method DjsDeferred#promise
+     * @returns An object with only the promise object.
+     */
+
+    promise: function () {
+        var result = {};
+        result.then = forwardCall(this, "then", result);
+        return result;
+    }
+};
+
+/** Creates a deferred object.
+ * @returns {DjsDeferred} A new deferred object. If jQuery is installed, then a jQueryDeferred object is returned, which provides a superset of features.
+*/
+function createDeferred() {
+    if (window.jQuery && window.jQuery.Deferred) {
+        return new window.jQuery.Deferred();
+    } else {
+        return new DjsDeferred();
+    }
+}
+
+
+
+
+/** createDeferred (see {@link module:datajs/deferred~createDeferred}) */
+exports.createDeferred = createDeferred;
+
+/** DjsDeferred (see {@link DjsDeferred}) */
+exports.DjsDeferred = DjsDeferred;}, "odata" : function(exports, module, require) {
+'use strict';
 
  /** @module odata */
 
 // Imports
-var odataUtils    = exports.utils     = require('./odata/utils.js');
+var odataUtils    = exports.utils     = require('./odata/odatautils.js');
 var odataHandler  = exports.handler   = require('./odata/handler.js');
 var odataMetadata = exports.metadata  = require('./odata/metadata.js');
 var odataNet      = exports.net       = require('./odata/net.js');
@@ -1675,7 +1842,7 @@ var odataJson     = exports.json      = require('./odata/json.js');
                     
 
 
-var utils = require('./odatajs/utils.js');
+var utils = require('./utils.js');
 var assigned = utils.assigned;
 
 var defined = utils.defined;
@@ -1810,9 +1977,9 @@ exports.request = function (request, success, error, handler, httpClient, metada
 
 };
 
-/** Parses the csdl metadata to DataJS metatdata format. This method can be used when the metadata is retrieved using something other than DataJS
- * @param {string} csdlMetadata - A string that represents the entire csdl metadata.
- * @returns {Object} An object that has the representation of the metadata in Datajs format.
+/** Parses the csdl metadata to ODataJS metatdata format. This method can be used when the metadata is retrieved using something other than odatajs
+ * @param {string} csdlMetadataDocument - A string that represents the entire csdl metadata.
+ * @returns {Object} An object that has the representation of the metadata in odatajs format.
  */
 exports.parseMetadata = function (csdlMetadataDocument) {
 
@@ -1822,13 +1989,14 @@ exports.parseMetadata = function (csdlMetadataDocument) {
 // Configure the batch handler to use the default handler for the batch parts.
 exports.batch.batchHandler.partHandler = exports.defaultHandler;
 exports.metadataHandler =  odataMetadata.metadataHandler;
-},{"./odata/batch.js":5,"./odata/handler.js":6,"./odata/json.js":7,"./odata/metadata.js":8,"./odata/net.js":9,"./odata/utils.js":10,"./odatajs/utils.js":13}],5:[function(require,module,exports){
-
+exports.jsonHandler =  odataJson.jsonHandler;
+}, "batch" : function(exports, module, require) {
+'use strict';
 
 /** @module odata/batch */
 
-var utils    = require('./../odatajs.js').utils;
-var odataUtils    = require('./utils.js');
+var utils    = require('./../utils.js');
+var odataUtils    = require('./odatautils.js');
 var odataHandler = require('./handler.js');
 
 var extend = utils.extend;
@@ -1844,19 +2012,14 @@ var normalizeHeaders = odataUtils.normalizeHeaders;
 var prepareRequest = odataUtils.prepareRequest;
 
 
-
-
-
 // Imports
-
-
 
 // CONTENT START
 var batchMediaType = "multipart/mixed";
 var responseStatusRegex = /^HTTP\/1\.\d (\d{3}) (.*)$/i;
 var responseHeaderRegex = /^([^()<>@,;:\\"\/[\]?={} \t]+)\s?:\s?(.*)/;
 
-/* Calculates a random 16 bit number and returns it in hexadecimal format.
+/** Calculates a random 16 bit number and returns it in hexadecimal format.
  * @returns {String} A 16-bit number in hex format.
  */
 function hex16() {
@@ -1864,7 +2027,7 @@ function hex16() {
     return Math.floor((1 + Math.random()) * 0x10000).toString(16).substr(1);
 }
 
-/* Creates a string that can be used as a multipart request boundary.
+/** Creates a string that can be used as a multipart request boundary.
  * @param {String} [prefix] - 
  * @returns {String} Boundary string of the format: <prefix><hex16>-<hex16>-<hex16>
  */
@@ -1873,7 +2036,7 @@ function createBoundary(prefix) {
     return prefix + hex16() + "-" + hex16() + "-" + hex16();
 }
 
-/* Gets the handler for data serialization of individual requests / responses in a batch.
+/** Gets the handler for data serialization of individual requests / responses in a batch.
  * @param context - Context used for data serialization.
  * @returns Handler object
  */
@@ -1882,7 +2045,7 @@ function partHandler(context) {
     return context.handler.partHandler;
 }
 
-/* Gets the current boundary used for parsing the body of a multipart response.
+/** Gets the current boundary used for parsing the body of a multipart response.
  * @param context - Context used for parsing a multipart response.
  * @returns {String} Boundary string.
  */
@@ -1917,7 +2080,7 @@ function batchSerializer(handler, data, context) {
     }
 }
 
-/* Parses a multipart/mixed response body from from the position defined by the context.
+/** Parses a multipart/mixed response body from from the position defined by the context.
  * @param {String}  text - Body of the multipart/mixed response.
  * @param context - Context used for parsing.
  * @return Array of objects representing the individual responses.
@@ -1933,7 +2096,7 @@ function readBatch(text, context) {
 
     // Read the batch parts
     var responses = [];
-    var partEnd;
+    var partEnd = null;
 
     while (partEnd !== "--" && context.position < text.length) {
         var partHeaders = readHeaders(text, context);
@@ -1981,11 +2144,11 @@ function readBatch(text, context) {
     return responses;
 }
 
-/* Parses the http headers in the text from the position defined by the context.
-* @param {String} text - Text containing an http response's headers</param>
-* @param context - Context used for parsing.
-* @returns Object containing the headers as key value pairs.
-* This function doesn't support split headers and it will stop reading when it hits two consecutive line breaks.
+/** Parses the http headers in the text from the position defined by the context.
+ * @param {String} text - Text containing an http response's headers
+ * @param context - Context used for parsing.
+ * @returns Object containing the headers as key value pairs.
+ * This function doesn't support split headers and it will stop reading when it hits two consecutive line breaks.
 */
 function readHeaders(text, context) {
     var headers = {};
@@ -2010,7 +2173,7 @@ function readHeaders(text, context) {
     return headers;
 }
 
-/* Parses an HTTP response.
+/** Parses an HTTP response.
  * @param {String} text -Text representing the http response.
  * @param context optional - Context used for parsing.
  * @param {String} delimiter -String used as delimiter of the multipart response parts.
@@ -2053,8 +2216,8 @@ function readLine(text, context) {
 }
 
 /** Returns a substring from the position given by the context up to value defined by the str parameter and increments the position in the context.
- * @param {String} text - Input string.</param>
- * @param context - Context used for reading the input string.</param>
+ * @param {String} text - Input string.
+ * @param context - Context used for reading the input string.
  * @param {String} [str] - Substring to read up to.
  * @returns {String} Substring to the first ocurrence of str or the end of the input string if str is not specified. Null if the marker is not found.
  */
@@ -2084,18 +2247,7 @@ function writeBatch(data, context) {
         throw { message: "Data is not a batch object." };
     }
 
-    // var batchBoundary = createBoundary("batch_"); Replaced by Michael with the line below
-    /**
-     * Needed some way to specify the batch boundary in the request header, and then have it be used
-     * to delimit each part of the batch request. Since the default (above) is to generate a dynamic
-     * boundary within the body of the message, I had no way to ensure that the same boundary string
-     * is used in the header *and* the body.
-     *
-     * See http://docs.oasis-open.org/odata/odata/v4.0/errata01/os/complete/part1-protocol/odata-v4.0-errata01-os-part1-protocol-complete.html#_Toc399426855
-     *
-     * @type {*|context.contentType.properties.boundary}
-     */
-    var batchBoundary = context.contentType.properties.boundary || createBoundary("batch_");
+    var batchBoundary = createBoundary("batch_");
     var batchParts = data.__batchRequests;
     var batch = "";
     var i, len;
@@ -2113,7 +2265,7 @@ function writeBatch(data, context) {
 }
 
 /** Creates the delimiter that indicates that start or end of an individual request.
- * @param {String} boundary Boundary string used to indicate the start of the request</param>
+ * @param {String} boundary Boundary string used to indicate the start of the request
  * @param {Boolean} close - Flag indicating that a close delimiter string should be generated
  * @returns {String} Delimiter string
  */
@@ -2128,8 +2280,8 @@ function writeBatchPartDelimiter(boundary, close) {
 
 /** Serializes a part of a batch request to a string. A part can be either a GET request or
  * a change set grouping several CUD (create, update, delete) requests.
- * @param part - Request or change set object in payload representation format</param>
- * @param context - Object containing context information used for the serialization</param>
+ * @param part - Request or change set object in payload representation format
+ * @param context - Object containing context information used for the serialization
  * @param {boolean} [nested] - 
  * @returns {String} String representing the serialized part
  * A change set is an array of request objects and they cannot be nested inside other change sets.
@@ -2167,8 +2319,8 @@ function writeBatchPart(part, context, nested) {
     return result;
 }
 
-/* Serializes a request object to a string.
- * @param request - Request object to serialize</param>
+/** Serializes a request object to a string.
+ * @param request - Request object to serialize
  * @returns {String} String representing the serialized request
  */
 function writeRequest(request) {
@@ -2192,16 +2344,19 @@ function writeRequest(request) {
 
 /** batchHandler (see {@link module:odata/batch~batchParser}) */
 exports.batchHandler = handler(batchParser, batchSerializer, batchMediaType, MAX_DATA_SERVICE_VERSION);
-exports.batchSerializer = batchSerializer;
-exports.writeRequest = writeRequest;
-},{"./../odatajs.js":11,"./handler.js":6,"./utils.js":10}],6:[function(require,module,exports){
 
+/** batchSerializer (see {@link module:odata/batch~batchSerializer}) */
+exports.batchSerializer = batchSerializer;
+
+/** writeRequest (see {@link module:odata/batch~writeRequest}) */
+exports.writeRequest = writeRequest;}, "handler" : function(exports, module, require) {
+'use strict';
 
 /** @module odata/handler */
 
 
-var utils    = require('./../odatajs.js').utils;
-var oDataUtils    = require('./utils.js');
+var utils    = require('./../utils.js');
+var oDataUtils    = require('./odatautils.js');
 
 // Imports.
 var assigned = utils.assigned;
@@ -2234,7 +2389,7 @@ function contentType(str) {
 
 /** Serializes an object with media type and properties dictionary into a string.
  * @param contentType - Object with media type and properties dictionary to serialize.
- * @return String representation of the media type object; undefined if contentType is null or undefined.</returns>
+ * @return String representation of the media type object; undefined if contentType is null or undefined.
  */
 function contentTypeToString(contentType) {
     if (!contentType) {
@@ -2254,7 +2409,7 @@ function contentTypeToString(contentType) {
  * @param {String} dataServiceVersion - String indicating the version of the protocol to use.
  * @param context - Operation context.
  * @param handler - Handler object that is processing a resquest or response.
- * @return Context object.</returns>
+ * @return Context object.
  */
 function createReadWriteContext(contentType, dataServiceVersion, context, handler) {
 
@@ -2383,7 +2538,7 @@ function handlerRead(handler, parseCallback, response, context) {
 /** Invokes the serializer associated with a handler for generating the payload of a HTTP request.
  * @param handler - Handler object that is processing the request.
  * @param {Function} serializeCallback - Serializer function that will generate the request payload.
- * @param response - HTTP request whose payload is going to be generated.
+ * @param request - HTTP request whose payload is going to be generated.
  * @param context - Object used as the context for serializing the request.
  * @returns {Boolean} True if the handler serialized the request payload and the request.body property was set; false otherwise.
  */
@@ -2452,7 +2607,6 @@ function textSerialize(handler, data /*, context */) {
 
 
 exports.textHandler = handler(textParse, textSerialize, "text/plain", MAX_DATA_SERVICE_VERSION);
-
 exports.contentType = contentType;
 exports.contentTypeToString = contentTypeToString;
 exports.handler = handler;
@@ -2461,16 +2615,14 @@ exports.fixRequestHeader = fixRequestHeader;
 exports.getRequestOrResponseHeader = getRequestOrResponseHeader;
 exports.getContentType = getContentType;
 exports.getDataServiceVersion = getDataServiceVersion;
-exports.MAX_DATA_SERVICE_VERSION = MAX_DATA_SERVICE_VERSION;
-},{"./../odatajs.js":11,"./utils.js":10}],7:[function(require,module,exports){
-
+exports.MAX_DATA_SERVICE_VERSION = MAX_DATA_SERVICE_VERSION;}, "json" : function(exports, module, require) {
 
 /** @module odata/json */
 
 
 
-var utils        = require('./../odatajs.js').utils;
-var oDataUtils   = require('./utils.js');
+var utils        = require('./../utils.js');
+var oDataUtils   = require('./odatautils.js');
 var oDataHandler = require('./handler.js');
 
 var odataNs = "odata";
@@ -2485,6 +2637,8 @@ var isObject = utils.isObject;
 //var normalizeURI = utils.normalizeURI;
 var parseInt10 = utils.parseInt10;
 var getFormatKind = utils.getFormatKind;
+var convertByteArrayToHexString = utils.convertByteArrayToHexString;
+
 
 var formatDateTimeOffset = oDataUtils.formatDateTimeOffset;
 var formatDuration = oDataUtils.formatDuration;
@@ -2502,7 +2656,6 @@ var lookupDefaultEntityContainer = oDataUtils.lookupDefaultEntityContainer;
 var lookupProperty = oDataUtils.lookupProperty;
 var MAX_DATA_SERVICE_VERSION = oDataUtils.MAX_DATA_SERVICE_VERSION;
 var maxVersion = oDataUtils.maxVersion;
-var XXXparseDateTime = oDataUtils.XXXparseDateTime;
 
 var isPrimitiveEdmType = oDataUtils.isPrimitiveEdmType;
 var isGeographyEdmType = oDataUtils.isGeographyEdmType;
@@ -2528,6 +2681,61 @@ var DELTATYPE_DELETED_LINK = "dl";
 var jsonMediaType = "application/json";
 var jsonContentType = oDataHandler.contentType(jsonMediaType);
 
+var jsonSerializableMetadata = ["@odata.id", "@odata.type"];
+
+
+
+
+
+/** Extend JSON OData payload with metadata
+ * @param handler - This handler.
+ * @param text - Payload text (this parser also handles pre-parsed objects).
+ * @param {Object} context - Object with parsing context.
+ * @return An object representation of the OData payload.
+ */
+function jsonParser(handler, text, context) {
+    var recognizeDates = defined(context.recognizeDates, handler.recognizeDates);
+    var model = context.metadata;
+    var json = (typeof text === "string") ? JSON.parse(text) : text;
+    var metadataContentType;
+    if (assigned(context.contentType) && assigned(context.contentType.properties)) {
+        metadataContentType = context.contentType.properties["odata.metadata"]; //TODO convert to lower before comparism
+    }
+
+    var payloadFormat = getFormatKind(metadataContentType, 1); // none: 0, minimal: 1, full: 2
+
+    // No errors should be throw out if we could not parse the json payload, instead we should just return the original json object.
+    if (payloadFormat === 0) {
+        return json;
+    }
+    else if (payloadFormat === 1) {
+        return addMinimalMetadataToJsonPayload(json, model, recognizeDates);
+    }
+    else if (payloadFormat === 2) {
+        // to do: using the EDM Model to get the type of each property instead of just guessing.
+        return addFullMetadataToJsonPayload(json, model, recognizeDates);
+    }
+    else {
+        return json;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // The regular expression corresponds to something like this:
 // /Date(123+60)/
@@ -2540,6 +2748,551 @@ var jsonContentType = oDataHandler.contentType(jsonMediaType);
 // however, by the time we see the objects, the characters already
 // look like regular forward slashes.
 var jsonDateRE = /^\/Date\((-?\d+)(\+|-)?(\d+)?\)\/$/;
+
+
+// Some JSON implementations cannot produce the character sequence \/
+// which is needed to format DateTime and DateTimeOffset into the
+// JSON string representation defined by the OData protocol.
+// See the history of this file for a candidate implementation of
+// a 'formatJsonDateString' function.
+
+
+var jsonReplacer = function (_, value) {
+    /// <summary>JSON replacer function for converting a value to its JSON representation.</summary>
+    /// <param value type="Object">Value to convert.</param>
+    /// <returns type="String">JSON representation of the input value.</returns>
+    /// <remarks>
+    ///   This method is used during JSON serialization and invoked only by the JSON.stringify function.
+    ///   It should never be called directly.
+    /// </remarks>
+
+    if (value && value.__edmType === "Edm.Time") {
+        return formatDuration(value);
+    } else {
+        return value;
+    }
+};
+
+/** Serializes a ODataJs payload structure to the wire format which can be send to the server
+ * @param handler - This handler.
+ * @param data - Data to serialize.
+ * @param {Object} context - Object with serialization context.
+ * @returns {String} The string representation of data.
+ */
+function jsonSerializer(handler, data, context) {
+
+    var dataServiceVersion = context.dataServiceVersion || "4.0";
+    var cType = context.contentType = context.contentType || jsonContentType;
+
+    if (cType && cType.mediaType === jsonContentType.mediaType) {
+        context.dataServiceVersion = maxVersion(dataServiceVersion, "4.0");
+        var newdata = formatJsonRequestPayload(data);
+        if (newdata) {
+            return JSON.stringify(newdata,jsonReplacer);
+        }
+    }
+    return undefined;
+}
+
+
+
+
+/** Convert OData objects for serialisation in to a new data structure
+ * @param data - Data to serialize.
+ * @returns {String} The string representation of data.
+ */
+function formatJsonRequestPayload(data) {
+    if (!data) {
+        return data;
+    }
+
+    if (isPrimitive(data)) {
+        return data;
+    }
+
+    if (isArray(data)) {
+        var newArrayData = [];
+        var i, len;
+        for (i = 0, len = data.length; i < len; i++) {
+            newArrayData[i] = formatJsonRequestPayload(data[i]);
+        }
+
+        return newArrayData;
+    }
+
+    var newdata = {};
+    for (var property in data) {
+        if (isJsonSerializableProperty(property)) {
+            newdata[property] = formatJsonRequestPayload(data[property]);
+        }
+    }
+
+    return newdata;
+}
+
+/** Determine form the attribute name if the attribute is a serializable property
+ * @param attribute
+ * @returns {boolean}
+ */
+function isJsonSerializableProperty(attribute) {
+    if (!attribute) {
+        return false;
+    }
+
+    if (attribute.indexOf("@odata.") == -1) {
+        return true;
+    }
+
+    var i, len;
+    for (i = 0, len = jsonSerializableMetadata.length; i < len; i++) {
+        var name = jsonSerializableMetadata[i];
+        if (attribute.indexOf(name) != -1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/** Creates an object containing information for the json payload.
+ * @param {String} kind - JSON payload kind
+ * @param {String} type - Type name of the JSON payload.
+ * @returns {Object} Object with kind and type fields.
+ */
+function jsonMakePayloadInfo(kind, type) {
+    return { kind: kind, type: type || null };
+}
+
+
+
+/** Add metadata to an JSON payload complex object containing full metadata
+ * @param {Object} data - Data structure to be extended
+ * @param {Object} model - Metadata model
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ */
+function addFullMetadataToJsonPayload(data, model, recognizeDates) {
+    var type;
+    if (utils.isObject(data)) {
+        for (var key in data) {
+            if (data.hasOwnProperty(key)) {
+                if (key.indexOf('@') === -1) {
+                    if (utils.isArray(data[key])) {
+                        for (var i = 0; i < data[key].length; ++i) {
+                            addFullMetadataToJsonPayload(data[key][i], model, recognizeDates);
+                        }
+                    } else if (utils.isObject(data[key])) {
+                        if (data[key] !== null) {
+                            //don't step into geo.. objects
+                            type = data[key+'@odata.type'];
+                            if (!type) {
+                                //type unknown
+                                addFullMetadataToJsonPayload(data[key], model, recognizeDates);
+                            } else {
+                                type = type.substring(1);
+                                if  (isGeographyEdmType(type) || isGeometryEdmType(type)) {
+                                    // don't add type info for geo* types
+                                } else {
+                                    addFullMetadataToJsonPayload(data[key], model, recognizeDates);
+                                }
+                            }
+                        }
+                    } else {
+                        type = data[key + '@odata.type'];
+
+                        // On .Net OData library, some basic EDM type is omitted, e.g. Edm.String, Edm.Int, and etc.
+                        // For the full metadata payload, we need to full fill the @data.type for each property if it is missing.
+                        // We do this is to help the OlingoJS consumers to easily get the type of each property.
+                        if (!assigned(type)) {
+                            // Guessing the "type" from the type of the value is not the right way here.
+                            // To do: we need to get the type from metadata instead of guessing.
+                            var typeFromObject = typeof data[key];
+                            if (typeFromObject === 'string') {
+                                addType(data, key, 'String');
+                            } else if (typeFromObject === 'boolean') {
+                                addType(data, key, 'Boolean');
+                            } else if (typeFromObject === 'number') {
+                                if (data[key] % 1 === 0) { // has fraction
+                                    addType(data, key, 'Int32'); // the biggst integer
+                                } else {
+                                    addType(data, key, 'Decimal'); // the biggst float single,doulbe,decimal
+                                }
+                            }
+                        }
+                        else {
+                            if (recognizeDates) {
+                                convertDatesNoEdm(data, key, type.substring(1));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return data;
+}
+
+/** Loop through the properties of an JSON payload object, look up the type info of the property and call
+ * the appropriate add*MetadataToJsonPayloadObject function
+ * @param {Object} data - Data structure to be extended
+ * @param {String} objectInfoType - Information about the data (name,type,typename,...)
+ * @param {String} baseURI - Base Url
+ * @param {Object} model - Metadata model
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ */
+function checkProperties(data, objectInfoType, baseURI, model, recognizeDates) {
+    for (var name in data) {
+        if (name.indexOf("@") === -1) {
+            var curType = objectInfoType;
+            var propertyValue = data[name];
+            var property = lookupProperty(curType.property,name); //TODO SK add check for parent type
+
+            while (( property === null) && (curType.baseType !== undefined)) {
+                curType = lookupEntityType(curType.baseType, model);
+                property = lookupProperty(curType.property,name);
+            }
+
+            if ( isArray(propertyValue)) {
+                //data[name+'@odata.type'] = '#' + property.type;
+                if (isCollectionType(property.type)) {
+                    addTypeColNoEdm(data,name,property.type.substring(11,property.type.length-1));
+                } else {
+                    addTypeNoEdm(data,name,property.type);
+                }
+
+
+                for ( var i = 0; i < propertyValue.length; i++) {
+                    addMetadataToJsonMinimalPayloadComplex(propertyValue[i], property, baseURI, model, recognizeDates);
+                }
+            } else if (isObject(propertyValue) && (propertyValue !== null)) {
+                addMetadataToJsonMinimalPayloadComplex(propertyValue, property, baseURI, model, recognizeDates);
+            } else {
+                //data[name+'@odata.type'] = '#' + property.type;
+                addTypeNoEdm(data,name,property.type);
+                if (recognizeDates) {
+                    convertDates(data, name, property.type);
+                }
+            }
+        }
+    }
+}
+
+
+
+/** Add metadata to an JSON payload object containing minimal metadata
+ * @param {Object} data - Json response payload object
+ * @param {Object} model - Object describing an OData conceptual schema
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ * @returns {Object} Object in the library's representation.
+ */
+function addMinimalMetadataToJsonPayload(data, model, recognizeDates) {
+
+    if (!assigned(model) || isArray(model)) {
+        return data;
+    }
+
+    var baseURI = data[contextUrlAnnotation];
+    var payloadInfo = createPayloadInfo(data, model);
+
+    switch (payloadInfo.detectedPayloadKind) {
+
+        case PAYLOADTYPE_VALUE:
+            if (payloadInfo.type !== null) {
+                return addMetadataToJsonMinimalPayloadEntity(data, payloadInfo, baseURI, model, recognizeDates);
+            } else {
+                return addTypeNoEdm(data,'value', payloadInfo.typeName);
+            }
+
+        case PAYLOADTYPE_FEED:
+            return addMetadataToJsonMinimalPayloadFeed(data, model, payloadInfo, baseURI, recognizeDates);
+
+        case PAYLOADTYPE_ENTRY:
+            return addMetadataToJsonMinimalPayloadEntity(data, payloadInfo, baseURI, model, recognizeDates);
+
+        case PAYLOADTYPE_COLLECTION:
+            return addMetadataToJsonMinimalPayloadCollection(data, model, payloadInfo, baseURI, recognizeDates);
+
+        case PAYLOADTYPE_PROPERTY:
+            if (payloadInfo.type !== null) {
+                return addMetadataToJsonMinimalPayloadEntity(data, payloadInfo, baseURI, model, recognizeDates);
+            } else {
+                return addTypeNoEdm(data,'value', payloadInfo.typeName);
+            }
+
+        case PAYLOADTYPE_SVCDOC:
+            return data;
+
+        case PAYLOADTYPE_LINKS:
+            return data;
+    }
+
+    return data;
+}
+
+/** Add metadata to an JSON payload feed object containing minimal metadata
+ * @param {Object} data - Data structure to be extended
+ * @param {Object} model - Metadata model
+ * @param {String} feedInfo - Information about the data (name,type,typename,...)
+ * @param {String} baseURI - Base Url
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ */
+function addMetadataToJsonMinimalPayloadFeed(data, model, feedInfo, baseURI, recognizeDates) {
+    var entries = [];
+    var items = data.value;
+    var i,len;
+    var entry;
+    for (i = 0, len = items.length; i < len; i++) {
+        var item = items[i];
+        if ( defined(item['@odata.type'])) { // in case of mixed feeds
+            var typeName = item['@odata.type'].substring(1);
+            var type = lookupEntityType( typeName, model);
+            var entryInfo = {
+                contentTypeOdata : feedInfo.contentTypeOdata,
+                detectedPayloadKind : feedInfo.detectedPayloadKind,
+                name : feedInfo.name,
+                type : type,
+                typeName : typeName
+            };
+
+            entry = addMetadataToJsonMinimalPayloadEntity(item, entryInfo, baseURI, model, recognizeDates);
+        } else {
+            entry = addMetadataToJsonMinimalPayloadEntity(item, feedInfo, baseURI, model, recognizeDates);
+        }
+
+        entries.push(entry);
+    }
+    data.value = entries;
+    return data;
+}
+
+
+/** Add metadata to an JSON payload entity object containing minimal metadata
+ * @param {Object} data - Data structure to be extended
+ * @param {String} objectInfo - Information about the data (name,type,typename,...)
+ * @param {String} baseURI - Base Url
+ * @param {Object} model - Metadata model
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ */
+function addMetadataToJsonMinimalPayloadEntity(data, objectInfo, baseURI, model, recognizeDates) {
+    addType(data,'',objectInfo.typeName);
+
+    var keyType = objectInfo.type;
+    while ((defined(keyType)) && ( keyType.key === undefined) && (keyType.baseType !== undefined)) {
+        keyType = lookupEntityType(keyType.baseType, model);
+    }
+
+    if (keyType.key !== undefined) {
+        var lastIdSegment = objectInfo.name + jsonGetEntryKey(data, keyType);
+        data['@odata.id'] = baseURI.substring(0, baseURI.lastIndexOf("$metadata")) + lastIdSegment;
+        data['@odata.editLink'] = lastIdSegment;
+    }
+
+    //var serviceURI = baseURI.substring(0, baseURI.lastIndexOf("$metadata"));
+
+    checkProperties(data, objectInfo.type, baseURI, model, recognizeDates);
+
+    return data;
+}
+
+/** Add metadata to an JSON payload complex object containing minimal metadata
+ * @param {Object} data - Data structure to be extended
+ * @param {String} property - Information about the data (name,type,typename,...)
+ * @param {String} baseURI - Base Url
+ * @param {Object} model - Metadata model
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ */
+function addMetadataToJsonMinimalPayloadComplex(data, property, baseURI, model, recognizeDates) {
+    var type = property.type;
+    if (isCollectionType(property.type)) {
+        type =property.type.substring(11,property.type.length-1);
+    }
+
+    addType(data,'',property.type);
+
+    var propertyType = lookupComplexType(type, model);
+    if (propertyType === null)  {
+        return; //TODO check what to do if the type is not known e.g. type #GeometryCollection
+    }
+
+    checkProperties(data, propertyType, baseURI, model, recognizeDates);
+}
+
+/** Add metadata to an JSON payload collection object containing minimal metadata
+ * @param {Object} data - Data structure to be extended
+ * @param {Object} model - Metadata model
+ * @param {String} collectionInfo - Information about the data (name,type,typename,...)
+ * @param {String} baseURI - Base Url
+ * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
+ */
+function addMetadataToJsonMinimalPayloadCollection(data, model, collectionInfo, baseURI, recognizeDates) {
+
+    addTypeColNoEdm(data,'', collectionInfo.typeName);
+
+    if (collectionInfo.type !== null) {
+        var entries = [];
+
+        var items = data.value;
+        var i,len;
+        var entry;
+        for (i = 0, len = items.length; i < len; i++) {
+            var item = items[i];
+            if ( defined(item['@odata.type'])) { // in case of mixed collections
+                var typeName = item['@odata.type'].substring(1);
+                var type = lookupEntityType( typeName, model);
+                var entryInfo = {
+                    contentTypeOdata : collectionInfo.contentTypeOdata,
+                    detectedPayloadKind : collectionInfo.detectedPayloadKind,
+                    name : collectionInfo.name,
+                    type : type,
+                    typeName : typeName
+                };
+
+                entry = addMetadataToJsonMinimalPayloadEntity(item, entryInfo, baseURI, model, recognizeDates);
+            } else {
+                entry = addMetadataToJsonMinimalPayloadEntity(item, collectionInfo, baseURI, model, recognizeDates);
+            }
+
+            entries.push(entry);
+        }
+        data.value = entries;
+    }
+    return data;
+}
+
+/** Add an OData type tag to an JSON payload object
+ * @param {Object} data - Data structure to be extended
+ * @param {String} name - Name of the property whose type is set
+ * @param {String} value - Type name
+ */
+function addType(data, name, value ) {
+    var fullName = name + '@odata.type';
+
+    if ( data[fullName] === undefined) {
+        data[fullName] = '#' + value;
+    }
+}
+
+/** Add an OData type tag to an JSON payload object collection (without "Edm." namespace)
+ * @param {Object} data - Data structure to be extended
+ * @param {String} name - Name of the property whose type is set
+ * @param {String} typeName - Type name
+ */
+function addTypeColNoEdm(data, name, typeName ) {
+    var fullName = name + '@odata.type';
+
+    if ( data[fullName] === undefined) {
+        if ( typeName.substring(0,4)==='Edm.') {
+            data[fullName] = '#Collection('+typeName.substring(4)+ ')';
+        } else {
+            data[fullName] = '#Collection('+typeName+ ')';
+        }
+    }
+}
+
+
+/** Add an OData type tag to an JSON payload object (without "Edm." namespace)
+ * @param {Object} data - Data structure to be extended
+ * @param {String} name - Name of the property whose type is set
+ * @param {String} value - Type name
+ */
+function addTypeNoEdm(data, name, value ) {
+    var fullName = name + '@odata.type';
+
+    if ( data[fullName] === undefined) {
+        if ( value.substring(0,4)==='Edm.') {
+            data[fullName] = '#' + value.substring(4);
+        } else {
+            data[fullName] = '#' + value;
+        }
+    }
+    return data;
+}
+/** Convert the date/time format of an property from the JSON payload object (without "Edm." namespace)
+ * @param {Object} data - Data structure to be extended
+ * @param propertyName - Name of the property to be changed
+ * @param type - Type
+ */
+function convertDates(data, propertyName,type) {
+    if (type === 'Edm.Date') {
+        data[propertyName] = oDataUtils.parseDate(data[propertyName], true);
+    } else if (type === 'Edm.DateTimeOffset') {
+        data[propertyName] = oDataUtils.parseDateTimeOffset(data[propertyName], true);
+    } else if (type === 'Edm.Duration') {
+        data[propertyName] = oDataUtils.parseDuration(data[propertyName], true);
+    } else if (type === 'Edm.Time') {
+        data[propertyName] = oDataUtils.parseTime(data[propertyName], true);
+    }
+}
+
+/** Convert the date/time format of an property from the JSON payload object
+ * @param {Object} data - Data structure to be extended
+ * @param propertyName - Name of the property to be changed
+ * @param type - Type
+ */
+function convertDatesNoEdm(data, propertyName,type) {
+    if (type === 'Date') {
+        data[propertyName] = oDataUtils.parseDate(data[propertyName], true);
+    } else if (type === 'DateTimeOffset') {
+        data[propertyName] = oDataUtils.parseDateTimeOffset(data[propertyName], true);
+    } else if (type === 'Duration') {
+        data[propertyName] = oDataUtils.parseDuration(data[propertyName], true);
+    } else if (type === 'Time') {
+        data[propertyName] = oDataUtils.parseTime(data[propertyName], true);
+    }
+}
+
+/** Formats a value according to Uri literal format
+ * @param value - Value to be formatted.
+ * @param type - Edm type of the value
+ * @returns {string} Value after formatting
+ */
+function formatLiteral(value, type) {
+
+    value = "" + formatRawLiteral(value, type);
+    value = encodeURIComponent(value.replace("'", "''"));
+    switch ((type)) {
+        case "Edm.Binary":
+            return "X'" + value + "'";
+        case "Edm.DateTime":
+            return "datetime" + "'" + value + "'";
+        case "Edm.DateTimeOffset":
+            return "datetimeoffset" + "'" + value + "'";
+        case "Edm.Decimal":
+            return value + "M";
+        case "Edm.Guid":
+            return "guid" + "'" + value + "'";
+        case "Edm.Int64":
+            return value + "L";
+        case "Edm.Float":
+            return value + "f";
+        case "Edm.Double":
+            return value + "D";
+        case "Edm.Geography":
+            return "geography" + "'" + value + "'";
+        case "Edm.Geometry":
+            return "geometry" + "'" + value + "'";
+        case "Edm.Time":
+            return "time" + "'" + value + "'";
+        case "Edm.String":
+            return "'" + value + "'";
+        default:
+            return value;
+    }
+}
+
+/** convert raw byteArray to hexString if the property is an binary property
+ * @param value - Value to be formatted.
+ * @param type - Edm type of the value
+ * @returns {string} Value after formatting
+ */
+function formatRawLiteral(value, type) {
+    switch (type) {
+        case "Edm.Binary":
+            return convertByteArrayToHexString(value);
+        default:
+            return value;
+    }
+}
 
 /** Formats the given minutes into (+/-)hh:mm format.
  * @param {Number} minutes - Number of minutes to format.
@@ -2592,234 +3345,11 @@ function parseJsonDateString(value) {
     // Allow undefined to be returned.
 }
 
-// Some JSON implementations cannot produce the character sequence \/
-// which is needed to format DateTime and DateTimeOffset into the
-// JSON string representation defined by the OData protocol.
-// See the history of this file for a candidate implementation of
-// a 'formatJsonDateString' function.
-
-/** Parses a JSON OData payload.
- * @param handler - This handler.
- * @param text - Payload text (this parser also handles pre-parsed objects).
- * @param {Object} context - Object with parsing context.
- * @return An object representation of the OData payload.</returns>
- */
-function jsonParser(handler, text, context) {
-
-    var recognizeDates = defined(context.recognizeDates, handler.recognizeDates);
-    var model = context.metadata;
-    var json = (typeof text === "string") ? JSON.parse(text) : text;
-    var metadataContentType;
-    if (assigned(context.contentType) && assigned(context.contentType.properties)) {
-        metadataContentType = context.contentType.properties["odata.metadata"]; //TODO convert to lower before comparism
-    }
-
-    var payloadFormat = getFormatKind(metadataContentType, 1); // none: 0, minimal: 1, full: 2
-
-    // No errors should be throw out if we could not parse the json payload, instead we should just return the original json object.
-    if (payloadFormat === 0) {
-        return json;
-    }
-    else if (payloadFormat === 1) {
-        return readPayloadMinimal(json, model, recognizeDates);
-    }
-    else if (payloadFormat === 2) {
-        // to do: using the EDM Model to get the type of each property instead of just guessing.
-        return readPayloadFull(json, model, recognizeDates);
-    }
-    else {
-        return json;
-    }
-}
-
-
-function addType(data, name, value ) {
-    var fullName = name + '@odata.type';
-
-    if ( data[fullName] === undefined) {
-        data[fullName] = value;
-    }
-}
-
-function addTypeNoEdm(data, name, value ) {
-    var fullName = name + '@odata.type';
-
-    if ( data[fullName] === undefined) {
-        if ( value.substring(0,4)==='Edm.') {
-            data[fullName] = value.substring(4);
-        } else {
-            data[fullName] = value;
-        }
-
-    }
-}
-
-function addTypeColNoEdm(data, name, value ) {
-    var fullName = name + '@odata.type';
-
-    if ( data[fullName] === undefined) {
-        if ( value.substring(0,4)==='Edm.') {
-            data[fullName] = 'Collection('+value.substring(4)+ ')';
-        } else {
-            data[fullName] = 'Collection('+value+ ')';
-        }
-    }
-}
-
-
-/* Adds typeinformation for String, Boolean and numerical EDM-types. 
- * The type is determined from the odata-json-format-v4.0.doc specification
- * @param data - Date which will be extendet
- * @param {Boolean} recognizeDates - True if strings formatted as datetime values should be treated as datetime values. False otherwise.
- * @returns An object representation of the OData payload.
- */
-function readPayloadFull(data, model, recognizeDates) {
-    var type;
-    if (utils.isObject(data)) {
-        for (var key in data) {
-            if (data.hasOwnProperty(key)) {
-                if (key.indexOf('@') === -1) {
-                    if (utils.isArray(data[key])) {
-                        for (var i = 0; i < data[key].length; ++i) {
-                            readPayloadFull(data[key][i], model, recognizeDates);
-                        }
-                    } else if (utils.isObject(data[key])) {
-                        if (data[key] !== null) {
-                            //don't step into geo.. objects
-                            var isGeo = false;
-                            type = data[key+'@odata.type'];
-                            if (type && (isGeographyEdmType(type) || isGeometryEdmType(type))) {
-                                // is gemometry type
-                            } else {
-                                readPayloadFull(data[key], model, recognizeDates);
-                            }
-                        }
-                    } else {
-                        type = data[key + '@odata.type'];
-
-                        // On .Net OData library, some basic EDM type is omitted, e.g. Edm.String, Edm.Int, and etc.
-                        // For the full metadata payload, we need to full fill the @data.type for each property if it is missing. 
-                        // We do this is to help the OlingoJS consumers to easily get the type of each property.
-                        if (!assigned(type)) {
-                            // Guessing the "type" from the type of the value is not the right way here. 
-                            // To do: we need to get the type from metadata instead of guessing. 
-                            var typeFromObject = typeof data[key];
-                            if (typeFromObject === 'string') {
-                                addType(data, key, '#String');
-                            } else if (typeFromObject === 'boolean') {
-                                addType(data, key, '#Boolean');
-                            } else if (typeFromObject === 'number') {
-                                if (data[key] % 1 === 0) { // has fraction 
-                                    addType(data, key, '#Int32'); // the biggst integer
-                                } else {
-                                    addType(data, key, '#Decimal'); // the biggst float single,doulbe,decimal
-                                }
-                            }
-                        }
-                        else {
-                            if (recognizeDates) {
-                                convertDatesNoEdm(data, key, type.substring(1));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return data;
-}
-
-/** Serializes the data by returning its string representation.
- * @param handler - This handler.
- * @param data - Data to serialize.
- * @param {Object} context - Object with serialization context.
- * @returns {String} The string representation of data.
- */
-function jsonSerializer(handler, data, context) {
-
-    var dataServiceVersion = context.dataServiceVersion || "4.0";
-    var cType = context.contentType = context.contentType || jsonContentType;
-
-    if (cType && cType.mediaType === jsonContentType.mediaType) {
-        context.dataServiceVersion = maxVersion(dataServiceVersion, "4.0");
-        var newdata = formatJsonRequestPayload(data);
-        if (newdata) {
-            return JSON.stringify(newdata);
-        }
-    }
-
-    return undefined;
-}
-
-function formatJsonRequestPayload(data) {
-    if (!data) {
-        return data;
-    }
-
-    if (isPrimitive(data)) {
-        return data;
-    }
-
-    if (isArray(data)) {
-        var newArrayData = [];
-        var i, len;
-        for (i = 0, len = data.length; i < len; i++) {
-            newArrayData[i] = formatJsonRequestPayload(data[i]);
-        }
-
-        return newArrayData;
-    }
-
-    var newdata = {};
-    for (var property in data) {
-        if (isJsonSerializableProperty(property)) {
-            newdata[property] = formatJsonRequestPayload(data[property]);
-        }
-    }
-
-    return newdata;
-}
-
-/** JSON replacer function for converting a value to its JSON representation.
- * @param {Object} value - Value to convert.</param>
- * @returns {String} JSON representation of the input value.
- * This method is used during JSON serialization and invoked only by the JSON.stringify function.
- * It should never be called directly.
- */
-function jsonReplacer(_, value) {
-    
-
-    if (value && value.__edmType === "Edm.Time") {
-        return formatDuration(value);
-    } else {
-        return value;
-    }
-}
-
-
-/** Creates an object containing information for the json payload.
- * @param {String} kind - JSON payload kind, one of the PAYLOADTYPE_XXX constant values.
- * @param {String} typeName - Type name of the JSON payload.
- * @returns {Object} Object with kind and type fields.
- */
-function jsonMakePayloadInfo(kind, type) {
-
-    /// TODO docu
-    /// <field name="kind" type="String">Kind of the JSON payload. One of the PAYLOADTYPE_XXX constant values.</field>
-    /// <field name="type" type="String">Data type of the JSON payload.</field>
-
-    return { kind: kind, type: type || null };
-}
-
 /** Creates an object containing information for the context
- * TODO check dou layout
- * @returns {Object} Object with type information
- * @returns {Object.detectedPayloadKind(optional)}  see constants starting with PAYLOADTYPE_
- * @returns {Object.deltaKind(optional)}  deltainformation, one of the following valus DELTATYPE_FEED | DELTATYPE_DELETED_ENTRY | DELTATYPE_LINK | DELTATYPE_DELETED_LINK
- * @returns {Object.typeName(optional)}  name of the type
- * @returns {Object.type(optional)}  object containing type information for entity- and complex-types ( null if a typeName is a primitive)
-*/
+ * @param {String} fragments - Uri fragment
+ * @param {Object} model - Object describing an OData conceptual schema
+ * @returns {Object} type(optional)  object containing type information for entity- and complex-types ( null if a typeName is a primitive)
+ */
 function parseContextUriFragment( fragments, model ) {
     var ret = {};
 
@@ -2844,14 +3374,14 @@ function parseContextUriFragment( fragments, model ) {
         } else {
             //TODO check for navigation resource
         }
-    } 
+    }
 
     ret.type = undefined;
     ret.typeName = undefined;
 
     var fragmentParts = fragments.split("/");
     var type;
-    
+
     for(var i = 0; i < fragmentParts.length; ++i) {
         var fragment = fragmentParts[i];
         if (ret.typeName === undefined) {
@@ -2863,7 +3393,7 @@ function parseContextUriFragment( fragments, model ) {
                     if ( fragment.charAt(index)=='(') {
                         rCount --;
                     } else if ( fragment.charAt(index)==')') {
-                        rCount ++;    
+                        rCount ++;
                     }
                 }
 
@@ -2871,7 +3401,7 @@ function parseContextUriFragment( fragments, model ) {
                     //TODO throw error
                 }
 
-                //remove the projected entity from the fragment; TODO decide if we want to store the projected entity 
+                //remove the projected entity from the fragment; TODO decide if we want to store the projected entity
                 var inPharenthesis = fragment.substring(index+2,fragment.length - 1);
                 fragment = fragment.substring(0,index+1);
 
@@ -2931,7 +3461,7 @@ function parseContextUriFragment( fragments, model ) {
                 continue;
             }
 
-            
+
 
             //TODO throw ERROR
         } else {
@@ -2941,7 +3471,7 @@ function parseContextUriFragment( fragments, model ) {
                 ret.detectedPayloadKind = PAYLOADTYPE_ENTRY;
                 // Capter 10.3 and 10.6
                 continue;
-            } 
+            }
 
             //check for derived types
             if (fragment.indexOf('.') !== -1) {
@@ -2967,18 +3497,18 @@ function parseContextUriFragment( fragments, model ) {
                 if (property !== null) {
                     //PAYLOADTYPE_COLLECTION
                     ret.typeName = property.type;
-                    
-                    
+
+
                     if (utils.startsWith(property.type, 'Collection')) {
                         ret.detectedPayloadKind = PAYLOADTYPE_COLLECTION;
                         var tmp12 =  property.type.substring(10+1,property.type.length - 1);
                         ret.typeName = tmp12;
-                        ret.type = lookupComplexType(tmp12, model);    
+                        ret.type = lookupComplexType(tmp12, model);
                         ret.detectedPayloadKind = PAYLOADTYPE_COLLECTION;
                     } else {
-                        ret.type = lookupComplexType(property.type, model);    
+                        ret.type = lookupComplexType(property.type, model);
                         ret.detectedPayloadKind = PAYLOADTYPE_PROPERTY;
-                    }    
+                    }
 
                     ret.name = fragment;
                     // Capter 10.15
@@ -3006,6 +3536,7 @@ function parseContextUriFragment( fragments, model ) {
     return ret;
 }
 
+
 /** Infers the information describing the JSON payload from its metadata annotation, structure, and data model.
  * @param {Object} data - Json response payload object.
  * @param {Object} model - Object describing an OData conceptual schema.
@@ -3014,10 +3545,8 @@ function parseContextUriFragment( fragments, model ) {
  * the function will report its kind as PAYLOADTYPE_FEED unless the inferFeedAsComplexType flag is set to true. This flag comes from the user request
  * and allows the user to control how the library behaves with an ambigous JSON payload.
  * @return Object with kind and type fields. Null if there is no metadata annotation or the payload info cannot be obtained..
-*/
+ */
 function createPayloadInfo(data, model) {
-    
-
     var metadataUri = data[contextUrlAnnotation];
     if (!metadataUri || typeof metadataUri !== "string") {
         return null;
@@ -3031,45 +3560,9 @@ function createPayloadInfo(data, model) {
     var fragment = metadataUri.substring(fragmentStart + 1);
     return parseContextUriFragment(fragment,model);
 }
-
-/** Processe a JSON response payload with metadata-minimal
- * @param {Object} data - Json response payload object
- * @param {Object} model - Object describing an OData conceptual schema
- * @param {Boolean} recognizeDates - Flag indicating whether datetime literal strings should be converted to JavaScript Date objects.
- * @returns {Object} Object in the library's representation.
- */
-function readPayloadMinimal(data, model, recognizeDates) {
-
-    if (!assigned(model) || isArray(model)) {
-        return data;
-    }
-
-    var baseURI = data[contextUrlAnnotation];
-    var payloadInfo = createPayloadInfo(data, model);
-
-    switch (payloadInfo.detectedPayloadKind) {
-        case PAYLOADTYPE_VALUE:
-            return readPayloadMinimalProperty(data, model, payloadInfo, baseURI, recognizeDates);
-        case PAYLOADTYPE_FEED:
-            return readPayloadMinimalFeed(data, model, payloadInfo, baseURI, recognizeDates);
-        case PAYLOADTYPE_ENTRY:
-            return readPayloadMinimalEntry(data, model, payloadInfo, baseURI, recognizeDates);
-        case PAYLOADTYPE_COLLECTION:
-            return readPayloadMinimalCollection(data, model, payloadInfo, baseURI, recognizeDates);
-        case PAYLOADTYPE_PROPERTY:
-            return readPayloadMinimalProperty(data, model, payloadInfo, baseURI, recognizeDates);
-        case PAYLOADTYPE_SVCDOC:
-            return data;
-        case PAYLOADTYPE_LINKS:
-            return data;
-    }
-
-    return data;
-}
-
 /** Gets the key of an entry.
  * @param {Object} data - JSON entry.
- *
+ * @param {Object} data - EDM entity model for key loockup.
  * @returns {string} Entry instance key.
  */
 function jsonGetEntryKey(data, entityModel) {
@@ -3096,260 +3589,11 @@ function jsonGetEntryKey(data, entityModel) {
     entityInstanceKey += ")";
     return entityInstanceKey;
 }
-
-function readPayloadMinimalProperty(data, model, collectionInfo, baseURI, recognizeDates) {
-    if (collectionInfo.type !== null) {
-        readPayloadMinimalObject(data, collectionInfo, baseURI, model, recognizeDates);
-    } else {
-        addTypeNoEdm(data,'value', collectionInfo.typeName);
-        //data['value@odata.type'] = '#'+collectionInfo.typeName;
-    }
-    return data;
-}
-
-function readPayloadMinimalCollection(data, model, collectionInfo, baseURI, recognizeDates) {
-    //data['@odata.type'] = '#Collection('+collectionInfo.typeName + ')';
-    addTypeColNoEdm(data,'', collectionInfo.typeName);
-
-    if (collectionInfo.type !== null) {
-        var entries = [];
-
-        var items = data.value;
-        for (i = 0, len = items.length; i < len; i++) {
-            var item = items[i];
-            if ( defined(item['@odata.type'])) { // in case of mixed collections
-                var typeName = item['@odata.type'].substring(1);
-                var type = lookupEntityType( typeName, model);
-                var entryInfo = {
-                    contentTypeOdata : collectionInfo.contentTypeOdata,
-                    detectedPayloadKind : collectionInfo.detectedPayloadKind,
-                    name : collectionInfo.name,
-                    type : type,
-                    typeName : typeName
-                };
-
-                entry = readPayloadMinimalObject(item, entryInfo, baseURI, model, recognizeDates);
-            } else {
-                entry = readPayloadMinimalObject(item, collectionInfo, baseURI, model, recognizeDates);
-            }
-            
-            entries.push(entry);
-        }
-        data.value = entries;
-    }
-    return data;
-}
-
-function readPayloadMinimalFeed(data, model, feedInfo, baseURI, recognizeDates) {
-    var entries = [];
-    var items = data.value;
-    for (i = 0, len = items.length; i < len; i++) {
-        var item = items[i];
-        if ( defined(item['@odata.type'])) { // in case of mixed feeds
-            var typeName = item['@odata.type'].substring(1);
-            var type = lookupEntityType( typeName, model);
-            var entryInfo = {
-                contentTypeOdata : feedInfo.contentTypeOdata,
-                detectedPayloadKind : feedInfo.detectedPayloadKind,
-                name : feedInfo.name,
-                type : type,
-                typeName : typeName
-            };
-
-            entry = readPayloadMinimalObject(item, entryInfo, baseURI, model, recognizeDates);
-        } else {
-            entry = readPayloadMinimalObject(item, feedInfo, baseURI, model, recognizeDates);
-        }
-        
-        entries.push(entry);
-    }
-    data.value = entries;
-    return data;
-}
-
-function readPayloadMinimalEntry(data, model, entryInfo, baseURI, recognizeDates) {
-    return readPayloadMinimalObject(data, entryInfo, baseURI, model, recognizeDates);
-}
-
-/** Formats a value according to Uri literal format
- * @param value - Value to be formatted.
- * @param type - Edm type of the value
- * @returns {string} Value after formatting
- */
-function formatLiteral(value, type) {
-
-    value = "" + formatRowLiteral(value, type);
-    value = encodeURIComponent(value.replace("'", "''"));
-    switch ((type)) {
-        case "Edm.Binary":
-            return "X'" + value + "'";
-        case "Edm.DateTime":
-            return "datetime" + "'" + value + "'";
-        case "Edm.DateTimeOffset":
-            return "datetimeoffset" + "'" + value + "'";
-        case "Edm.Decimal":
-            return value + "M";
-        case "Edm.Guid":
-            return "guid" + "'" + value + "'";
-        case "Edm.Int64":
-            return value + "L";
-        case "Edm.Float":
-            return value + "f";
-        case "Edm.Double":
-            return value + "D";
-        case "Edm.Geography":
-            return "geography" + "'" + value + "'";
-        case "Edm.Geometry":
-            return "geometry" + "'" + value + "'";
-        case "Edm.Time":
-            return "time" + "'" + value + "'";
-        case "Edm.String":
-            return "'" + value + "'";
-        default:
-            return value;
-    }
-}
-
-function formatRowLiteral(value, type) {
-    switch (type) {
-        case "Edm.Binary":
-            return convertByteArrayToHexString(value);
-        default:
-            return value;
-    }
-}
-
-function convertDates(data, propertyName,type) {
-    if (type === 'Edm.Date') {
-        data[propertyName] = oDataUtils.parseDate(data[propertyName], true);
-    } else if (type === 'Edm.DateTimeOffset') {
-        data[propertyName] = oDataUtils.parseDateTimeOffset(data[propertyName], true);
-    } else if (type === 'Edm.Duration') {
-        data[propertyName] = oDataUtils.parseDuration(data[propertyName], true);
-    } else if (type === 'Edm.Time') {
-        data[propertyName] = oDataUtils.parseTime(data[propertyName], true);
-    }
-}
-
-function convertDatesNoEdm(data, propertyName,type) {
-    if (type === 'Date') {
-        data[propertyName] = oDataUtils.parseDate(data[propertyName], true);
-    } else if (type === 'DateTimeOffset') {
-        data[propertyName] = oDataUtils.parseDateTimeOffset(data[propertyName], true);
-    } else if (type === 'Duration') {
-        data[propertyName] = oDataUtils.parseDuration(data[propertyName], true);
-    } else if (type === 'Time') {
-        data[propertyName] = oDataUtils.parseTime(data[propertyName], true);
-    }
-}
-
-function checkProperties(data, objectInfoType, baseURI, model, recognizeDates) {
-    for (var name in data) {
-        if (name.indexOf("@") === -1) {
-            var curType = objectInfoType;
-            var propertyValue = data[name];
-            var property = lookupProperty(curType.property,name); //TODO SK add check for parent type
-
-            while (( property === null) && (curType.baseType !== undefined)) {
-                curType = lookupEntityType(curType.baseType, model);
-                property = lookupProperty(curType.property,name);
-            }
-            
-            if ( isArray(propertyValue)) {
-                //data[name+'@odata.type'] = '#' + property.type;
-                if (isCollectionType(property.type)) {
-                    addTypeColNoEdm(data,name,property.type.substring(11,property.type.length-1));
-                } else {
-                    addTypeNoEdm(data,name,property.type);
-                }
-
-
-                for ( var i = 0; i < propertyValue.length; i++) {
-                    readPayloadMinimalComplexObject(propertyValue[i], property, baseURI, model, recognizeDates);
-                }
-            } else if (isObject(propertyValue) && (propertyValue !== null)) {
-                readPayloadMinimalComplexObject(propertyValue, property, baseURI, model, recognizeDates);
-            } else {
-                //data[name+'@odata.type'] = '#' + property.type;
-                addTypeNoEdm(data,name,property.type);
-                if (recognizeDates) {
-                    convertDates(data, name, property.type);
-                }
-            }
-        }
-    }
-}
-
-function readPayloadMinimalComplexObject(data, property, baseURI, model, recognizeDates) {
-    var type = property.type;
-    if (isCollectionType(property.type)) {
-        type =property.type.substring(11,property.type.length-1);
-    }
-
-    //data['@odata.type'] = '#'+type;
-    addType(data,'',property.type);
-
-
-    var propertyType = lookupComplexType(type, model);
-    if (propertyType === null)  {
-        return; //TODO check what to do if the type is not known e.g. type #GeometryCollection
-    }
-  
-    checkProperties(data, propertyType, baseURI, model, recognizeDates);
-}
-
-function readPayloadMinimalObject(data, objectInfo, baseURI, model, recognizeDates) {
-    //data['@odata.type'] = '#'+objectInfo.typeName;
-    addType(data,'',objectInfo.typeName);
-
-    var keyType = objectInfo.type;
-    while ((defined(keyType)) && ( keyType.key === undefined) && (keyType.baseType !== undefined)) {
-        keyType = lookupEntityType(keyType.baseType, model);
-    }
-
-    //if ((keyType !== undefined) && (keyType.key !== undefined)) { 
-    if (keyType.key !== undefined) { 
-        var lastIdSegment = objectInfo.name + jsonGetEntryKey(data, keyType);
-        data['@odata.id'] = baseURI.substring(0, baseURI.lastIndexOf("$metadata")) + lastIdSegment;
-        data['@odata.editLink'] = lastIdSegment;
-    }
-
-    var serviceURI = baseURI.substring(0, baseURI.lastIndexOf("$metadata"));
-    //json ComputeUrisIfMissing(data, entryInfo, actualType, serviceURI, dataModel, baseTypeModel);
-
-    checkProperties(data, objectInfo.type, baseURI, model, recognizeDates);
-    
-    return data;
-}
-
-var jsonSerializableMetadata = ["@odata.id", "@odata.type"];
-
-function isJsonSerializableProperty(property) {
-    if (!property) {
-        return false;
-    }
-
-    if (property.indexOf("@odata.") == -1) {
-        return true;
-    } 
-
-    var i, len;
-    for (i = 0, len = jsonSerializableMetadata.length; i < len; i++) {
-        var name = jsonSerializableMetadata[i];
-        if (property.indexOf(name) != -1) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 /** Determines whether a type name is a primitive type in a JSON payload.
  * @param {String} typeName - Type name to test.
  * @returns {Boolean} True if the type name an EDM primitive type or an OData spatial type; false otherwise.
  */
 function jsonIsPrimitiveType(typeName) {
-
     return isPrimitiveEdmType(typeName) || isGeographyEdmType(typeName) || isGeometryEdmType(typeName);
 }
 
@@ -3357,20 +3601,17 @@ function jsonIsPrimitiveType(typeName) {
 var jsonHandler = oDataHandler.handler(jsonParser, jsonSerializer, jsonMediaType, MAX_DATA_SERVICE_VERSION);
 jsonHandler.recognizeDates = false;
 
-
-
 exports.createPayloadInfo = createPayloadInfo;
 exports.jsonHandler = jsonHandler;
 exports.jsonParser = jsonParser;
 exports.jsonSerializer = jsonSerializer;
-exports.parseJsonDateString = parseJsonDateString;
-},{"./../odatajs.js":11,"./handler.js":6,"./utils.js":10}],8:[function(require,module,exports){
-
+exports.parseJsonDateString = parseJsonDateString;}, "metadata" : function(exports, module, require) {
+'use strict';
 
 /** @module odata/metadata */
 
-var utils    = require('./../odatajs.js').utils;
-var oDSxml    = require('./../odatajs.js').xml;
+var utils    = require('./../utils.js');
+var oDSxml    = require('./../xml.js');
 var odataHandler    = require('./handler.js');
 
 
@@ -3713,7 +3954,7 @@ var schema = {
 /** Converts a Pascal-case identifier into a camel-case identifier.
  * @param {String} text - Text to convert.
  * @returns {String} Converted text.
- * If the text starts with multiple uppercase characters, it is left as-is.</remarks>
+ * If the text starts with multiple uppercase characters, it is left as-is.
  */
 function scriptCase(text) {
 
@@ -3809,7 +4050,6 @@ function parseConceptualModelElement(element) {
         // Currently, only m: for metadata is supported as a prefix in the internal schema table,
         // un-prefixed element names imply one a CSDL element.
         var schemaName = null;
-        var handled = false;
         if (isEdmNamespace(nsURI) || nsURI === null) {
             schemaName = "";
         } else if (nsURI === odataMetaXmlNs) {
@@ -3853,7 +4093,7 @@ function parseConceptualModelElement(element) {
 /** Parses a metadata document.
  * @param handler - This handler.
  * @param {String} text - Metadata text.
- * @returns An object representation of the conceptual model.</returns>
+ * @returns An object representation of the conceptual model.
  */
 function metadataParser(handler, text) {
 
@@ -3870,15 +4110,13 @@ exports.schema = schema;
 exports.scriptCase = scriptCase;
 exports.getChildSchema = getChildSchema;
 exports.parseConceptualModelElement = parseConceptualModelElement;
-exports.metadataParser = metadataParser;
-},{"./../odatajs.js":11,"./handler.js":6}],9:[function(require,module,exports){
-
+exports.metadataParser = metadataParser;}, "net" : function(exports, module, require) {
 
 /** @module odata/net */
+/*for browser*/
 
 
-
-var utils    = require('./../odatajs.js').utils;
+var utils    = require('./../utils.js');
 // Imports.
 
 var defined = utils.defined;
@@ -3898,11 +4136,9 @@ var ticks = 0;
  */
 function canUseJSONP(request) {
     
-    if (request.method && request.method !== "GET") {
-        return false;
-    }
+    return !(request.method && request.method !== "GET");
 
-    return true;
+
 }
 
 /** Creates an IFRAME tag for loading the JSONP script
@@ -3921,7 +4157,7 @@ function createIFrame(url) {
 
     writeHtmlToIFrame(iframe, html);
     return iframe;
-};
+}
 
 /** Creates a XmlHttpRequest object.
  * @returns {XmlHttpRequest} XmlHttpRequest object.
@@ -3986,7 +4222,7 @@ function removeCallback(name, tick) {
             ticks -= 1;
         }
     }
-};
+}
 
 /** Removes an iframe.
  * @param {Object} iframe - The iframe to remove.
@@ -3999,7 +4235,7 @@ function removeIFrame(iframe) {
     }
 
     return null;
-};
+}
 
 /** Reads response headers into array.
  * @param {XMLHttpRequest} xhr - HTTP request with response available.
@@ -4041,7 +4277,12 @@ exports.defaultHttpClient = {
      * @param {Function} error - Error callback with an error object.
      * @returns {Object} Object with an 'abort' method for the operation.
      */
-    request: function (request, success, error) {
+    request: function createRequest() {
+
+        var that = this;
+
+
+        return function(request, success, error) {
 
         var result = {};
         var xhr = null;
@@ -4074,9 +4315,9 @@ exports.defaultHttpClient = {
 
         var name;
         var url = request.requestUri;
-        var enableJsonpCallback = defined(request.enableJsonpCallback, this.enableJsonpCallback);
-        var callbackParameterName = defined(request.callbackParameterName, this.callbackParameterName);
-        var formatQueryString = defined(request.formatQueryString, this.formatQueryString);
+        var enableJsonpCallback = defined(request.enableJsonpCallback , that.enableJsonpCallback);
+        var callbackParameterName = defined(request.callbackParameterName, that.callbackParameterName);
+        var formatQueryString = defined(request.formatQueryString, that.formatQueryString);
         if (!enableJsonpCallback || isLocalUrl(url)) {
 
             xhr = createXmlHttpRequest();
@@ -4188,18 +4429,18 @@ exports.defaultHttpClient = {
 
         return result;
     }
+    }()
 };
 
 
 
 exports.canUseJSONP = canUseJSONP;
 exports.isAbsoluteUrl = isAbsoluteUrl;
-exports.isLocalUrl = isLocalUrl;
-},{"./../odatajs.js":11}],10:[function(require,module,exports){
-
+exports.isLocalUrl = isLocalUrl;}, "odatautils" : function(exports, module, require) {
+'use strict';
  /** @module odata/utils */
 
-var utils    = require('./../odatajs.js').utils;
+var utils    = require('./../utils.js');
 
 // Imports
 var assigned = utils.assigned;
@@ -4381,10 +4622,10 @@ function forEachSchema(metadata, callback) {
 }
 
 /** Formats a millisecond and a nanosecond value into a single string.
- * @param {Numaber} ms - Number of milliseconds to format.</param>
- * @param {Numaber} ns - Number of nanoseconds to format.</param>
+ * @param {Number} ms - Number of milliseconds to format.
+ * @param {Number} ns - Number of nanoseconds to format.
  * @returns {String} Formatted text.
- * If the value is already as string it's returned as-is.</remarks>
+ * If the value is already as string it's returned as-is.
  */
 function formatMilliseconds(ms, ns) {
 
@@ -4581,7 +4822,7 @@ var collectionTypeRE = /Collection\((.*)\)/;
 
 /** Tests whether a value is a collection value in the library's internal representation.
  * @param value - Value to test.
- * @param {Sting} typeName - Type name of the value. This is used to disambiguate from a collection property value.
+ * @param {String} typeName - Type name of the value. This is used to disambiguate from a collection property value.
  * @returns {Boolean} True is the value is a feed value; false otherwise.
  */
 function isCollection(value, typeName) {
@@ -4645,7 +4886,7 @@ function isEntry(value) {
 
 /** Tests whether a value is a feed value in the library's internal representation.
  * @param value - Value to test.
- * @param {Sting} typeName - Type name of the value. This is used to disambiguate from a collection property value.
+ * @param {String} typeName - Type name of the value. This is used to disambiguate from a collection property value.
  * @returns {Boolean} True is the value is a feed value; false otherwise.
  */
 function isFeed(value, typeName) {
@@ -4662,11 +4903,9 @@ function isFeed(value, typeName) {
  * @returns {Boolean} True if the type is a geography EDM type; false otherwise.
  */
 function isGeographyEdmType(typeName) {
-
     //check with edm
-    var ret = contains(geographyEdmTypes, typeName) || 
+    return contains(geographyEdmTypes, typeName) ||
         (typeName.indexOf('.') === -1 && contains(geographyTypes, typeName));
-    return ret; 
         
 }
 
@@ -4675,11 +4914,11 @@ function isGeographyEdmType(typeName) {
  * @returns {Boolean} True if the type is a geometry EDM type; false otherwise.
  */
 function isGeometryEdmType(typeName) {
-
-    var ret = contains(geometryEdmTypes, typeName) ||
+    return contains(geometryEdmTypes, typeName) ||
         (typeName.indexOf('.') === -1 && contains(geometryTypes, typeName));
-    return ret; 
 }
+
+
 
 /** Tests whether a value is a named stream value in the library's internal representation.
  * @param value - Value to test.
@@ -4768,7 +5007,7 @@ function lookupInMetadata(name, metadata, kind) {
 }
 
 /** Looks up a entity set by name.
- * @param {Array} properties - Array of entity set objects as per EDM metadata( may be null)
+ * @param {Array} entitySets - Array of entity set objects as per EDM metadata( may be null)
  * @param {String} name - Name to look for.
  * @returns {Object} The entity set object; null if not found.
  */
@@ -4780,7 +5019,7 @@ function lookupEntitySet(entitySets, name) {
 }
 
 /** Looks up a entity set by name.
- * @param {Array} properties - Array of entity set objects as per EDM metadata (may be null)
+ * @param {Array} singletons - Array of entity set objects as per EDM metadata (may be null)
  * @param {String} name - Name to look for.
  * @returns {Object} The entity set object; null if not found.
  */
@@ -4794,7 +5033,7 @@ function lookupSingleton(singletons, name) {
 /** Looks up a complex type object by name.
  * @param {String} name - Name, possibly null or empty.
  * @param metadata - Metadata store; one of edmx, schema, or an array of any of them.
- * @returns A complex type description if the name is found; null otherwise.</returns>
+ * @returns A complex type description if the name is found; null otherwise.
  */
 function lookupComplexType(name, metadata) {
 
@@ -4804,7 +5043,7 @@ function lookupComplexType(name, metadata) {
 /** Looks up an entity type object by name.
  * @param {String} name - Name, possibly null or empty.
  * @param metadata - Metadata store; one of edmx, schema, or an array of any of them.
- * @returns An entity type description if the name is found; null otherwise.</returns>
+ * @returns An entity type description if the name is found; null otherwise.
  */
 function lookupEntityType(name, metadata) {
 
@@ -4813,9 +5052,8 @@ function lookupEntityType(name, metadata) {
 
 
 /** Looks up an
- * @param {String} name - Name, possibly null or empty.
  * @param metadata - Metadata store; one of edmx, schema, or an array of any of them.
- * @returns An entity container description if the name is found; null otherwise.</returns>
+ * @returns An entity container description if the name is found; null otherwise.
  */
 function lookupDefaultEntityContainer(metadata) {
 
@@ -4829,7 +5067,7 @@ function lookupDefaultEntityContainer(metadata) {
 /** Looks up an entity container object by name.
  * @param {String} name - Name, possibly null or empty.
  * @param metadata - Metadata store; one of edmx, schema, or an array of any of them.
- * @returns An entity container description if the name is found; null otherwise.</returns>
+ * @returns An entity container description if the name is found; null otherwise.
  */
 function lookupEntityContainer(name, metadata) {
 
@@ -4837,7 +5075,7 @@ function lookupEntityContainer(name, metadata) {
 }
 
 /** Looks up a function import by name.
- * @param {Array} properties - Array of function import objects as per EDM metadata (May be null)
+ * @param {Array} functionImports - Array of function import objects as per EDM metadata (May be null)
  * @param {String} name - Name to look for.
  * @returns {Object} The entity set object; null if not found.
  */
@@ -4886,7 +5124,9 @@ function lookupNavigationPropertyType(navigationProperty, metadata) {
 
 /** Looks up the target entityset name for a navigation property.
  * @param {Object} navigationProperty - 
- * @param {Object} metadata - 
+ * @param {Object} sourceEntitySetName -
+ * @param {Object} metadata -
+ * metadata
  * @returns {String} The entityset name for the specified property, null if not found.
  */
 function lookupNavigationPropertyEntitySet(navigationProperty, sourceEntitySetName, metadata) {
@@ -4915,7 +5155,7 @@ function lookupNavigationPropertyEntitySet(navigationProperty, sourceEntitySetNa
 }
 
 /** Gets the entitySet info, container name and functionImports for an entitySet
- * @param {Object} navigationProperty - 
+ * @param {Object} entitySetName -
  * @param {Object} metadata - 
  * @returns {Object} The info about the entitySet.
  */
@@ -4955,7 +5195,7 @@ function removeNamespace(ns, fullName) {
  * @param {String} name - Name (assigned).
  * @param schema - Schema object as per EDM metadata.
  * @param {String} kind - Kind of object to look for as per EDM metadata.
- * @returns An entity type description if the name is found; null otherwise.</returns>
+ * @returns An entity type description if the name is found; null otherwise.
  */
 function lookupInSchema(name, schema, kind) {
 
@@ -5068,6 +5308,7 @@ var parseDateTimeRE = /^(-?\d{4,})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(
 /** Parses a string into a DateTime value.
  * @param {String} value - Value to parse.
  * @param {Boolean} withOffset - Whether offset is expected.
+ * @param {Boolean} nullOnError - return null instead of throwing an exception
  * @returns {Date} The parsed value.
  */
 function parseDateTimeMaybeOffset(value, withOffset, nullOnError) {
@@ -5152,6 +5393,7 @@ function parseDateTimeMaybeOffset(value, withOffset, nullOnError) {
 
 /** Parses a string into a Date object.
  * @param {String} propertyValue - Value to parse.
+ * @param {Boolean} nullOnError - return null instead of throwing an exception
  * @returns {Date} The parsed with year, month, day set, time values are set to 0
  */
 function parseDate(propertyValue, nullOnError) {
@@ -5171,6 +5413,11 @@ function parseDate(propertyValue, nullOnError) {
 
 var parseTimeOfDayRE = /^(\d+):(\d+)(:(\d+)(.(\d+))?)?$/;
 
+/**Parses a time into a Date object.
+ * @param propertyValue
+ * @param {Boolean} nullOnError - return null instead of throwing an exception
+ * @returns {{h: Number, m: Number, s: Number, ms: Number}}
+ */
 function parseTimeOfDay(propertyValue, nullOnError) {
     var parts = parseTimeOfDayRE.exec(propertyValue);
 
@@ -5179,15 +5426,14 @@ function parseTimeOfDay(propertyValue, nullOnError) {
         'h' :parseInt10(parts[1]),
         'm' :parseInt10(parts[2]),
         's' :parseInt10(parts[4]),
-        'ms' :parseInt10(parts[6]),
+        'ms' :parseInt10(parts[6])
      };
 }
 
 /** Parses a string into a DateTimeOffset value.
  * @param {String} propertyValue - Value to parse.
+ * @param {Boolean} nullOnError - return null instead of throwing an exception
  * @returns {Date} The parsed value.
-
-
  * The resulting object is annotated with an __edmType property and
  * an __offset property reflecting the original intended offset of
  * the value. The time is adjusted for UTC time, as the current
@@ -5319,9 +5565,10 @@ function prepareRequest(request, handler, context) {
 
 /** Traverses a tree of objects invoking callback for every value.
  * @param {Object} item - Object or array to traverse.
+ * @param {Object} owner - Pass through each callback
  * @param {Function} callback - Callback function with key and value, similar to JSON.parse reviver.
  * @returns {Object} The object with traversed properties.
- Unlike the JSON reviver, this won't delete null members.</remarks>
+ Unlike the JSON reviver, this won't delete null members.
 */
 function traverseInternal(item, owner, callback) {
 
@@ -5347,7 +5594,7 @@ function traverseInternal(item, owner, callback) {
  * @param {Object} item - Object or array to traverse.
  * @param {Function} callback - Callback function with key and value, similar to JSON.parse reviver.
  * @returns {Object} The traversed object.
- * Unlike the JSON reviver, this won't delete null members.</remarks>
+ * Unlike the JSON reviver, this won't delete null members.
 */
 function traverse(item, callback) {
 
@@ -5445,200 +5692,1032 @@ exports.removeNamespace = removeNamespace;
 exports.traverse = traverse;
 
 
-},{"./../odatajs.js":11}],11:[function(require,module,exports){
+}, "store" : function(exports, module, require) {
+//'use strict';
+
+ /** @module store */
 
 
-/** @module datajs */
 
-//expose all external usable functions via self.apiFunc = function
-exports.version = {
-    major: 1,
-    minor: 1,
-    build: 1
+
+
+exports.defaultStoreMechanism = "best";
+
+/** Creates a new store object.
+ * @param {String} name - Store name.
+ * @param {String} [mechanism] - 
+ * @returns {Object} Store object.
+*/
+exports.createStore = function (name, mechanism) {
+
+
+    if (!mechanism) {
+        mechanism = exports.defaultStoreMechanism;
+    }
+
+    if (mechanism === "best") {
+        mechanism = (DomStore.isSupported()) ? "dom" : "memory";
+    }
+
+    var factory = mechanisms[mechanism];
+    if (factory) {
+        return factory.create(name);
+    }
+
+    throw { message: "Failed to create store", name: name, mechanism: mechanism };
 };
 
-exports.deferred = require('./odatajs/deferred.js');
-exports.utils = require('./odatajs/utils.js');
-exports.xml = require('./odatajs/xml.js');
+exports.DomStore       = DomStore       = require('./store/dom.js');
+exports.IndexedDBStore = IndexedDBStore = require('./store/indexeddb.js');
+exports.MemoryStore    = MemoryStore    = require('./store/memory.js');
+
+var mechanisms = {
+    indexeddb: IndexedDBStore,
+    dom: DomStore,
+    memory: MemoryStore
+};
+
+exports.mechanisms = mechanisms;
 
 
-},{"./odatajs/deferred.js":12,"./odatajs/utils.js":13,"./odatajs/xml.js":14}],12:[function(require,module,exports){
 
 
-/** @module datajs/deferred */
+}, "dom" : function(exports, module, require) {
+'use strict';
+
+/** @module store/dom */
 
 
 
-/** Creates a new function to forward a call.
- * @param {Object} thisValue - Value to use as the 'this' object.
- * @param {String} name - Name of function to forward to.
- * @param {Object} returnValue - Return value for the forward call (helps keep identity when chaining calls).
- * @returns {Function} A new function that will forward a call.
+var utils = require('./../utils.js');
+
+// Imports.
+var throwErrorCallback = utils.throwErrorCallback;
+var delay = utils.delay;
+
+var localStorage = null;
+
+/** This method is used to override the Date.toJSON method and is called only by
+ * JSON.stringify.  It should never be called directly.
+ * @summary Converts a Date object into an object representation friendly to JSON serialization.
+ * @returns {Object} Object that represents the Date.
  */
-function forwardCall(thisValue, name, returnValue) {
-    return function () {
-        thisValue[name].apply(thisValue, arguments);
-        return returnValue;
+function domStoreDateToJSON() {
+    var newValue = { v: this.valueOf(), t: "[object Date]" };
+    // Date objects might have extra properties on them so we save them.
+    for (var name in this) {
+        newValue[name] = this[name];
+    }
+    return newValue;
+}
+
+/** This method is used during JSON parsing and invoked only by the reviver function.
+ * It should never be called directly.
+ * @summary JSON reviver function for converting an object representing a Date in a JSON stream to a Date object
+ * @param value _
+ * @param value - Object to convert.
+ * @returns {Date} Date object.
+ */
+function domStoreJSONToDate(_, value) {
+    if (value && value.t === "[object Date]") {
+        var newValue = new Date(value.v);
+        for (var name in value) {
+            if (name !== "t" && name !== "v") {
+                newValue[name] = value[name];
+            }
+        }
+        value = newValue;
+    }
+    return value;
+}
+
+/** Qualifies the key with the name of the store.
+ * @param {Object} store - Store object whose name will be used for qualifying the key.
+ * @param {String} key - Key string.
+ * @returns {String} Fully qualified key string.
+ */
+function qualifyDomStoreKey(store, key) {
+    return store.name + "#!#" + key;
+}
+
+/** Gets the key part of a fully qualified key string.
+ * @param {Object} store - Store object whose name will be used for qualifying the key.
+ * @param {String} key - Fully qualified key string.
+ * @returns {String} Key part string
+ */
+function unqualifyDomStoreKey(store, key) {
+    return key.replace(store.name + "#!#", "");
+}
+
+/** Constructor for store objects that use DOM storage as the underlying mechanism.
+ * @class DomStore
+ * @constructor
+ * @param {String} name - Store name.
+ */
+function DomStore(name) {
+    this.name = name;
+}
+
+/** Creates a store object that uses DOM Storage as its underlying mechanism.
+ * @method module:store/dom~DomStore.create
+ * @param {String} name - Store name.
+ * @returns {Object} Store object.
+ */
+DomStore.create = function (name) {
+
+    if (DomStore.isSupported()) {
+        localStorage = localStorage || window.localStorage;
+        return new DomStore(name);
+    }
+
+    throw { message: "Web Storage not supported by the browser" };
+};
+
+/** Checks whether the underlying mechanism for this kind of store objects is supported by the browser.
+ * @method DomStore.isSupported
+ * @returns {Boolean} - True if the mechanism is supported by the browser; otherwise false.
+*/
+DomStore.isSupported = function () {
+    return !!window.localStorage;
+};
+
+/** Adds a new value identified by a key to the store.
+ * @method module:store/dom~DomStore#add
+ * @param {String} key - Key string.
+ * @param value - Value that is going to be added to the store.
+ * @param {Function} success - Callback for a successful add operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+ * This method errors out if the store already contains the specified key.
+ */
+DomStore.prototype.add = function (key, value, success, error) {
+    error = error || this.defaultError;
+    var store = this;
+    this.contains(key, function (contained) {
+        if (!contained) {
+            store.addOrUpdate(key, value, success, error);
+        } else {
+            delay(error, { message: "key already exists", key: key });
+        }
+    }, error);
+};
+
+/** This method will overwrite the key's current value if it already exists in the store; otherwise it simply adds the new key and value.
+ * @summary Adds or updates a value identified by a key to the store.
+ * @method module:store/dom~DomStore#addOrUpdate
+ * @param {String} key - Key string.
+ * @param value - Value that is going to be added or updated to the store.
+ * @param {Function} success - Callback for a successful add or update operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+ */
+DomStore.prototype.addOrUpdate = function (key, value, success, error) {
+    error = error || this.defaultError;
+
+    if (key instanceof Array) {
+        error({ message: "Array of keys not supported" });
+    } else {
+        var fullKey = qualifyDomStoreKey(this, key);
+        var oldDateToJSON = Date.prototype.toJSON;
+        try {
+            var storedValue = value;
+            if (storedValue !== undefined) {
+                // Dehydrate using json
+                Date.prototype.toJSON = domStoreDateToJSON;
+                storedValue = window.JSON.stringify(value);
+            }
+            // Save the json string.
+            localStorage.setItem(fullKey, storedValue);
+            delay(success, key, value);
+        }
+        catch (e) {
+            if (e.code === 22 || e.number === 0x8007000E) {
+                delay(error, { name: "QUOTA_EXCEEDED_ERR", error: e });
+            } else {
+                delay(error, e);
+            }
+        }
+        finally {
+            Date.prototype.toJSON = oldDateToJSON;
+        }
+    }
+};
+
+/** In case of an error, this method will not restore any keys that might have been deleted at that point.
+ * @summary Removes all the data associated with this store object.
+ * @method module:store/dom~DomStore#clear
+ * @param {Function} success - Callback for a successful clear operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+ */
+DomStore.prototype.clear = function (success, error) {
+
+    error = error || this.defaultError;
+    try {
+        var i = 0, len = localStorage.length;
+        while (len > 0 && i < len) {
+            var fullKey = localStorage.key(i);
+            var key = unqualifyDomStoreKey(this, fullKey);
+            if (fullKey !== key) {
+                localStorage.removeItem(fullKey);
+                len = localStorage.length;
+            } else {
+                i++;
+            }
+        }
+        delay(success);
+    }
+    catch (e) {
+        delay(error, e);
+    }
+};
+
+/** This function does nothing in DomStore as it does not have a connection model
+ * @method module:store/dom~DomStore#close
+ */
+DomStore.prototype.close = function () {
+};
+
+/** Checks whether a key exists in the store.
+ * @method module:store/dom~DomStore#contains
+ * @param {String} key - Key string.
+ * @param {Function} success - Callback indicating whether the store contains the key or not.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+*/
+DomStore.prototype.contains = function (key, success, error) {
+    error = error || this.defaultError;
+    try {
+        var fullKey = qualifyDomStoreKey(this, key);
+        var value = localStorage.getItem(fullKey);
+        delay(success, value !== null);
+    } catch (e) {
+        delay(error, e);
+    }
+};
+
+DomStore.prototype.defaultError = throwErrorCallback;
+
+/** Gets all the keys that exist in the store.
+ * @method module:store/dom~DomStore#getAllKeys
+ * @param {Function} success - Callback for a successful get operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+ */
+DomStore.prototype.getAllKeys = function (success, error) {
+
+    error = error || this.defaultError;
+
+    var results = [];
+    var i, len;
+
+    try {
+        for (i = 0, len = localStorage.length; i < len; i++) {
+            var fullKey = localStorage.key(i);
+            var key = unqualifyDomStoreKey(this, fullKey);
+            if (fullKey !== key) {
+                results.push(key);
+            }
+        }
+        delay(success, results);
+    }
+    catch (e) {
+        delay(error, e);
+    }
+};
+
+/** Identifies the underlying mechanism used by the store.*/
+DomStore.prototype.mechanism = "dom";
+
+/** Reads the value associated to a key in the store.
+ * @method module:store/dom~DomStore#read
+ * @param {String} key - Key string.
+ * @param {Function} success - Callback for a successful reads operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+ */
+DomStore.prototype.read = function (key, success, error) {
+
+    error = error || this.defaultError;
+
+    if (key instanceof Array) {
+        error({ message: "Array of keys not supported" });
+    } else {
+        try {
+            var fullKey = qualifyDomStoreKey(this, key);
+            var value = localStorage.getItem(fullKey);
+            if (value !== null && value !== "undefined") {
+                // Hydrate using json
+                value = window.JSON.parse(value, domStoreJSONToDate);
+            }
+            else {
+                value = undefined;
+            }
+            delay(success, key, value);
+        } catch (e) {
+            delay(error, e);
+        }
+    }
+};
+
+/** Removes a key and its value from the store.
+ * @method module:store/dom~DomStore#remove
+ * @param {String} key - Key string.
+ * @param {Function} success - Callback for a successful remove operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+ */
+DomStore.prototype.remove = function (key, success, error) {
+    error = error || this.defaultError;
+
+    if (key instanceof Array) {
+        error({ message: "Batches not supported" });
+    } else {
+        try {
+            var fullKey = qualifyDomStoreKey(this, key);
+            localStorage.removeItem(fullKey);
+            delay(success);
+        } catch (e) {
+            delay(error, e);
+        }
+    }
+};
+
+/** Updates the value associated to a key in the store.
+ * @method module:store/dom~DomStore#update
+ * @param {String} key - Key string.
+ * @param value - New value.
+ * @param {Function} success - Callback for a successful update operation.
+ * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked
+ * This method errors out if the specified key is not found in the store.
+ */
+DomStore.prototype.update = function (key, value, success, error) {
+    error = error || this.defaultError;
+    var store = this;
+    this.contains(key, function (contained) {
+        if (contained) {
+            store.addOrUpdate(key, value, success, error);
+        } else {
+            delay(error, { message: "key not found", key: key });
+        }
+    }, error);
+};
+
+module.exports = DomStore;}, "indexeddb" : function(exports, module, require) {
+'use strict';
+
+/** @module store/indexeddb */
+var utils = require('./../utils.js');
+
+// Imports.
+var throwErrorCallback = utils.throwErrorCallback;
+var delay = utils.delay;
+
+
+var indexedDB = utils.inBrowser() ? window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.indexedDB : undefined;
+var IDBKeyRange = utils.inBrowser() ? window.IDBKeyRange || window.webkitIDBKeyRange : undefined;
+var IDBTransaction = utils.inBrowser() ? window.IDBTransaction || window.webkitIDBTransaction || {} : {} ;
+
+var IDBT_READ_ONLY = IDBTransaction.READ_ONLY || "readonly";
+var IDBT_READ_WRITE = IDBTransaction.READ_WRITE || "readwrite";
+
+/** Returns either a specific error handler or the default error handler
+ * @param {Function} error - The specific error handler
+ * @param {Function} defaultError - The default error handler
+ * @returns {Function} The error callback
+ */
+function getError(error, defaultError) {
+
+    return function (e) {
+        var errorFunc = error || defaultError;
+        if (!errorFunc) {
+            return;
+        }
+
+        // Old api quota exceeded error support.
+        if (Object.prototype.toString.call(e) === "[object IDBDatabaseException]") {
+            if (e.code === 11 /* IndexedDb disk quota exceeded */) {
+                errorFunc({ name: "QuotaExceededError", error: e });
+                return;
+            }
+            errorFunc(e);
+            return;
+        }
+
+        var errName;
+        try {
+            var errObj = e.target.error || e;
+            errName = errObj.name;
+        } catch (ex) {
+            errName = (e.type === "blocked") ? "IndexedDBBlocked" : "UnknownError";
+        }
+        errorFunc({ name: errName, error: e });
     };
 }
 
-/** Initializes a new DjsDeferred object.
- * <ul>
- * <li> Compability Note A - Ordering of callbacks through chained 'then' invocations <br>
- *
- * The Wiki entry at http://wiki.commonjs.org/wiki/Promises/A
- * implies that .then() returns a distinct object.
- *
- * For compatibility with http://api.jquery.com/category/deferred-object/
- * we return this same object. This affects ordering, as
- * the jQuery version will fire callbacks in registration
- * order regardless of whether they occur on the result
- * or the original object.
- * </li>
- * <li>Compability Note B - Fulfillment value <br>
- *
- * The Wiki entry at http://wiki.commonjs.org/wiki/Promises/A
- * implies that the result of a success callback is the
- * fulfillment value of the object and is received by
- * other success callbacks that are chained.
- *
- * For compatibility with http://api.jquery.com/category/deferred-object/
- * we disregard this value instead.
- * </li></ul>
- * @class DjsDeferred 
+/** Opens the store object's indexed db database.
+ * @param {IndexedDBStore} store - The store object
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
  */
- function DjsDeferred() {
-    this._arguments = undefined;
-    this._done = undefined;
-    this._fail = undefined;
-    this._resolved = false;
-    this._rejected = false;
+function openStoreDb(store, success, error) {
+
+    var storeName = store.name;
+    var dbName = "_odatajs_" + storeName;
+
+    var request = indexedDB.open(dbName);
+    request.onblocked = error;
+    request.onerror = error;
+
+    request.onupgradeneeded = function () {
+        var db = request.result;
+        if (!db.objectStoreNames.contains(storeName)) {
+            db.createObjectStore(storeName);
+        }
+    };
+
+    request.onsuccess = function (event) {
+        var db = request.result;
+        if (!db.objectStoreNames.contains(storeName)) {
+            // Should we use the old style api to define the database schema?
+            if ("setVersion" in db) {
+                var versionRequest = db.setVersion("1.0");
+                versionRequest.onsuccess = function () {
+                    var transaction = versionRequest.transaction;
+                    transaction.oncomplete = function () {
+                        success(db);
+                    };
+                    db.createObjectStore(storeName, null, false);
+                };
+                versionRequest.onerror = error;
+                versionRequest.onblocked = error;
+                return;
+            }
+
+            // The database doesn't have the expected store.
+            // Fabricate an error object for the event for the schema mismatch
+            // and error out.
+            event.target.error = { name: "DBSchemaMismatch" };
+            error(event);
+            return;
+        }
+
+        db.onversionchange = function(event) {
+            event.target.close();
+        };
+        success(db);
+    };
 }
 
+/** Opens a new transaction to the store
+ * @param {IndexedDBStore} store - The store object
+ * @param {Integer} mode - The read/write mode of the transaction (constants from IDBTransaction)
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+function openTransaction(store, mode, success, error) {
 
-DjsDeferred.prototype = {
+    var storeName = store.name;
+    var storeDb = store.db;
+    var errorCallback = getError(error, store.defaultError);
 
-    /** Adds success and error callbacks for this deferred object.
-     * See Compatibility Note A.
-     * @method DjsDeferred#then
-     * @param {function} [fulfilledHandler] - Success callback ( may be null)
-     * @param {function} [errorHandler] - Error callback ( may be null)
-     */
-    then: function (fulfilledHandler, errorHandler) {
-
-        if (fulfilledHandler) {
-            if (!this._done) {
-                this._done = [fulfilledHandler];
-            } else {
-                this._done.push(fulfilledHandler);
-            }
-        }
-
-        if (errorHandler) {
-            if (!this._fail) {
-                this._fail = [errorHandler];
-            } else {
-                this._fail.push(errorHandler);
-            }
-        }
-
-        //// See Compatibility Note A in the DjsDeferred constructor.
-        //// if (!this._next) {
-        ////    this._next = createDeferred();
-        //// }
-        //// return this._next.promise();
-
-        if (this._resolved) {
-            this.resolve.apply(this, this._arguments);
-        } else if (this._rejected) {
-            this.reject.apply(this, this._arguments);
-        }
-
-        return this;
-    },
-
-    /** Invokes success callbacks for this deferred object.
-     * All arguments are forwarded to success callbacks.
-     * @method DjsDeferred#resolve
-     */
-    resolve: function (/* args */) {
-        if (this._done) {
-            var i, len;
-            for (i = 0, len = this._done.length; i < len; i++) {
-                //// See Compability Note B - Fulfillment value.
-                //// var nextValue =
-                this._done[i].apply(null, arguments);
-            }
-
-            //// See Compatibility Note A in the DjsDeferred constructor.
-            //// this._next.resolve(nextValue);
-            //// delete this._next;
-
-            this._done = undefined;
-            this._resolved = false;
-            this._arguments = undefined;
-        } else {
-            this._resolved = true;
-            this._arguments = arguments;
-        }
-    },
-
-    /** Invokes error callbacks for this deferred object.
-     * All arguments are forwarded to error callbacks.
-     * @method DjsDeferred#reject
-     */
-    reject: function (/* args */) {
-        
-        if (this._fail) {
-            var i, len;
-            for (i = 0, len = this._fail.length; i < len; i++) {
-                this._fail[i].apply(null, arguments);
-            }
-
-            this._fail = undefined;
-            this._rejected = false;
-            this._arguments = undefined;
-        } else {
-            this._rejected = true;
-            this._arguments = arguments;
-        }
-    },
-
-    /** Returns a version of this object that has only the read-only methods available.
-     * @method DjsDeferred#promise
-     * @returns An object with only the promise object.
-     */
-
-    promise: function () {
-        var result = {};
-        result.then = forwardCall(this, "then", result);
-        return result;
+    if (storeDb) {
+        success(storeDb.transaction(storeName, mode));
+        return;
     }
+
+    openStoreDb(store, function (db) {
+        store.db = db;
+        success(db.transaction(storeName, mode));
+    }, errorCallback);
+}
+
+/** Creates a new IndexedDBStore.
+ * @class IndexedDBStore
+ * @constructor
+ * @param {String} name - The name of the store.
+ * @returns {Object} The new IndexedDBStore.
+ */
+function IndexedDBStore(name) {
+    this.name = name;
+}
+
+/** Creates a new IndexedDBStore.
+ * @method module:store/indexeddb~IndexedDBStore.create
+ * @param {String} name - The name of the store.
+ * @returns {Object} The new IndexedDBStore.
+ */
+IndexedDBStore.create = function (name) {
+    if (IndexedDBStore.isSupported()) {
+        return new IndexedDBStore(name);
+    }
+
+    throw { message: "IndexedDB is not supported on this browser" };
 };
 
-/** Creates a deferred object.
- * @returns {DjsDeferred} A new deferred object. If jQuery is installed, then a jQueryDeferred object is returned, which provides a superset of features.
+/** Returns whether IndexedDB is supported.
+ * @method module:store/indexeddb~IndexedDBStore.isSupported
+ * @returns {Boolean} True if IndexedDB is supported, false otherwise.
+ */
+IndexedDBStore.isSupported = function () {
+    return !!indexedDB;
+};
+
+/** Adds a key/value pair to the store
+ * @method module:store/indexeddb~IndexedDBStore#add
+ * @param {String} key - The key
+ * @param {Object} value - The value
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
 */
-function createDeferred() {
-    if (window.jQuery && window.jQuery.Deferred) {
-        return new window.jQuery.Deferred();
+IndexedDBStore.prototype.add = function (key, value, success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    var keys = [];
+    var values = [];
+
+    if (key instanceof Array) {
+        keys = key;
+        values = value;
     } else {
-        return new DjsDeferred();
+        keys = [key];
+        values = [value];
+    }
+
+    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
+        transaction.onabort = getError(error, defaultError, key, "add");
+        transaction.oncomplete = function () {
+            if (key instanceof Array) {
+                success(keys, values);
+            } else {
+                success(key, value);
+            }
+        };
+
+        for (var i = 0; i < keys.length && i < values.length; i++) {
+            transaction.objectStore(name).add({ v: values[i] }, keys[i]);
+        }
+    }, error);
+};
+
+/** Adds or updates a key/value pair in the store
+ * @method module:store/indexeddb~IndexedDBStore#addOrUpdate
+ * @param {String} key - The key
+ * @param {Object} value - The value
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+IndexedDBStore.prototype.addOrUpdate = function (key, value, success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    var keys = [];
+    var values = [];
+
+    if (key instanceof Array) {
+        keys = key;
+        values = value;
+    } else {
+        keys = [key];
+        values = [value];
+    }
+
+    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
+        transaction.onabort = getError(error, defaultError);
+        transaction.oncomplete = function () {
+            if (key instanceof Array) {
+                success(keys, values);
+            } else {
+                success(key, value);
+            }
+        };
+
+        for (var i = 0; i < keys.length && i < values.length; i++) {
+            var record = { v: values[i] };
+            transaction.objectStore(name).put(record, keys[i]);
+        }
+    }, error);
+};
+
+/** Clears the store
+ * @method module:store/indexeddb~IndexedDBStore#clear
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+IndexedDBStore.prototype.clear = function (success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
+        transaction.onerror = getError(error, defaultError);
+        transaction.oncomplete = function () {
+            success();
+        };
+
+        transaction.objectStore(name).clear();
+    }, error);
+};
+
+/** Closes the connection to the database
+ * @method module:store/indexeddb~IndexedDBStore#close
+*/
+IndexedDBStore.prototype.close = function () {
+    
+    if (this.db) {
+        this.db.close();
+        this.db = null;
     }
 };
 
+/** Returns whether the store contains a key
+ * @method module:store/indexeddb~IndexedDBStore#contains
+ * @param {String} key - The key
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+IndexedDBStore.prototype.contains = function (key, success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    openTransaction(this, IDBT_READ_ONLY, function (transaction) {
+        var objectStore = transaction.objectStore(name);
+        var request = objectStore.get(key);
+
+        transaction.oncomplete = function () {
+            success(!!request.result);
+        };
+        transaction.onerror = getError(error, defaultError);
+    }, error);
+};
+
+IndexedDBStore.prototype.defaultError = throwErrorCallback;
+
+/** Gets all the keys from the store
+ * @method module:store/indexeddb~IndexedDBStore#getAllKeys
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+IndexedDBStore.prototype.getAllKeys = function (success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
+        var results = [];
+
+        transaction.oncomplete = function () {
+            success(results);
+        };
+
+        var request = transaction.objectStore(name).openCursor();
+
+        request.onerror = getError(error, defaultError);
+        request.onsuccess = function (event) {
+            var cursor = event.target.result;
+            if (cursor) {
+                results.push(cursor.key);
+                // Some tools have issues because continue is a javascript reserved word.
+                cursor["continue"].call(cursor);
+            }
+        };
+    }, error);
+};
+
+/** Identifies the underlying mechanism used by the store.
+*/
+IndexedDBStore.prototype.mechanism = "indexeddb";
+
+/** Reads the value for the specified key
+ * @method module:store/indexeddb~IndexedDBStore#read
+ * @param {String} key - The key
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ * If the key does not exist, the success handler will be called with value = undefined
+ */
+IndexedDBStore.prototype.read = function (key, success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    var keys = (key instanceof Array) ? key : [key];
+
+    openTransaction(this, IDBT_READ_ONLY, function (transaction) {
+        var values = [];
+
+        transaction.onerror = getError(error, defaultError, key, "read");
+        transaction.oncomplete = function () {
+            if (key instanceof Array) {
+                success(keys, values);
+            } else {
+                success(keys[0], values[0]);
+            }
+        };
+
+        for (var i = 0; i < keys.length; i++) {
+            // Some tools have issues because get is a javascript reserved word. 
+            var objectStore = transaction.objectStore(name);
+            var request = objectStore.get.call(objectStore, keys[i]);
+            request.onsuccess = function (event) {
+                var record = event.target.result;
+                values.push(record ? record.v : undefined);
+            };
+        }
+    }, error);
+};
+
+/** Removes the specified key from the store
+ * @method module:store/indexeddb~IndexedDBStore#remove
+ * @param {String} key - The key
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+IndexedDBStore.prototype.remove = function (key, success, error) {
+
+    var name = this.name;
+    var defaultError = this.defaultError;
+    var keys = (key instanceof Array) ? key : [key];
+
+    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
+        transaction.onerror = getError(error, defaultError);
+        transaction.oncomplete = function () {
+            success();
+        };
+
+        for (var i = 0; i < keys.length; i++) {
+            // Some tools have issues because continue is a javascript reserved word.
+            var objectStore = transaction.objectStore(name);
+            objectStore["delete"].call(objectStore, keys[i]);
+        }
+    }, error);
+};
+
+/** Updates a key/value pair in the store
+ * @method module:store/indexeddb~IndexedDBStore#update
+ * @param {String} key - The key
+ * @param {Object} value - The value
+ * @param {Function} success - The success callback
+ * @param {Function} error - The error callback
+ */
+IndexedDBStore.prototype.update = function (key, value, success, error) {
+    var name = this.name;
+    var defaultError = this.defaultError;
+    var keys = [];
+    var values = [];
+
+    if (key instanceof Array) {
+        keys = key;
+        values = value;
+    } else {
+        keys = [key];
+        values = [value];
+    }
+
+    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
+        transaction.onabort = getError(error, defaultError);
+        transaction.oncomplete = function () {
+            if (key instanceof Array) {
+                success(keys, values);
+            } else {
+                success(key, value);
+            }
+        };
+
+        for (var i = 0; i < keys.length && i < values.length; i++) {
+            var request = transaction.objectStore(name).openCursor(IDBKeyRange.only(keys[i]));
+            var record = { v: values[i] };
+            request.pair = { key: keys[i], value: record };
+            request.onsuccess = function (event) {
+                var cursor = event.target.result;
+                if (cursor) {
+                    cursor.update(event.target.pair.value);
+                } else {
+                    transaction.abort();
+                }
+            }
+        }
+    }, error);
+};
 
 
+module.exports = IndexedDBStore;}, "memory" : function(exports, module, require) {
+'use strict';
 
-/** createDeferred (see {@link module:datajs/deferred~createDeferred}) */
-exports.createDeferred = createDeferred;
-
-/** DjsDeferred (see {@link DjsDeferred}) */
-exports.DjsDeferred = DjsDeferred;
-},{}],13:[function(require,module,exports){
+/** @module store/memory */
 
 
-/** @module datajs/utils */
+var utils = require('./../utils.js');
+
+// Imports.
+var throwErrorCallback = utils.throwErrorCallback;
+var delay = utils.delay;
+
+/** Constructor for store objects that use a sorted array as the underlying mechanism.
+ * @class MemoryStore
+ * @constructor
+ * @param {String} name - Store name.
+ */
+function MemoryStore(name) {
+
+    var holes = [];
+    var items = [];
+    var keys = {};
+
+    this.name = name;
+
+    var getErrorCallback = function (error) {
+        return error || this.defaultError;
+    };
+
+    /** Validates that the specified key is not undefined, not null, and not an array
+     * @param key - Key value.
+     * @param {Function} error - Error callback.
+     * @returns {Boolean} True if the key is valid. False if the key is invalid and the error callback has been queued for execution.
+     */
+    function validateKeyInput(key, error) {
+
+        var messageString;
+
+        if (key instanceof Array) {
+            messageString = "Array of keys not supported";
+        }
+
+        if (key === undefined || key === null) {
+            messageString = "Invalid key";
+        }
+
+        if (messageString) {
+            delay(error, { message: messageString });
+            return false;
+        }
+        return true;
+    }
+
+    /** This method errors out if the store already contains the specified key.
+     * @summary Adds a new value identified by a key to the store.
+     * @method module:store/memory~MemoryStore#add
+     * @param {String} key - Key string.
+     * @param value - Value that is going to be added to the store.
+     * @param {Function} success - Callback for a successful add operation.
+     * @param {Function} error - Callback for handling errors. If not specified then store.defaultError is invoked.
+     */
+    this.add = function (key, value, success, error) {
+        error = getErrorCallback(error);
+
+        if (validateKeyInput(key, error)) {
+            if (!keys.hasOwnProperty(key)) {
+                this.addOrUpdate(key, value, success, error);
+            } else {
+                error({ message: "key already exists", key: key });
+            }
+        }
+    };
+
+    /** This method will overwrite the key's current value if it already exists in the store; otherwise it simply adds the new key and value.
+     * @summary Adds or updates a value identified by a key to the store.
+     * @method module:store/memory~MemoryStore#addOrUpdate
+     * @param {String} key - Key string.
+     * @param value - Value that is going to be added or updated to the store.
+     * @param {Function} success - Callback for a successful add or update operation.
+     * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+    */
+    this.addOrUpdate = function (key, value, success, error) {
+        
+        error = getErrorCallback(error);
+
+        if (validateKeyInput(key, error)) {
+            var index = keys[key];
+            if (index === undefined) {
+                if (holes.length > 0) {
+                    index = holes.splice(0, 1);
+                } else {
+                    index = items.length;
+                }
+            }
+            items[index] = value;
+            keys[key] = index;
+            delay(success, key, value);
+        }
+    };
+
+    /** Removes all the data associated with this store object.
+     * @method module:store/memory~MemoryStore#clear
+     * @param {Function} success - Callback for a successful clear operation.
+     */
+    this.clear = function (success) {
+        items = [];
+        keys = {};
+        holes = [];
+        delay(success);
+    };
+
+    /** Checks whether a key exists in the store.
+     * @method module:store/memory~MemoryStore#contains
+     * @param {String} key - Key string.
+     * @param {Function} success - Callback indicating whether the store contains the key or not.
+     */
+    this.contains = function (key, success) {
+        var contained = keys.hasOwnProperty(key);
+        delay(success, contained);
+    };
+
+    /** Gets all the keys that exist in the store.
+     * @method module:store/memory~MemoryStore#getAllKeys
+     * @param {Function} success - Callback for a successful get operation.
+     */
+    this.getAllKeys = function (success) {
+
+        var results = [];
+        for (var name in keys) {
+            results.push(name);
+        }
+        delay(success, results);
+    };
+
+    /** Reads the value associated to a key in the store.
+     * @method module:store/memory~MemoryStore#read
+     * @param {String} key - Key string.
+     * @param {Function} success - Callback for a successful reads operation.
+     * @param {Function} error - Callback for handling errors. If not specified then store.defaultError is invoked.
+     */
+    this.read = function (key, success, error) {
+        error = getErrorCallback(error);
+
+        if (validateKeyInput(key, error)) {
+            var index = keys[key];
+            delay(success, key, items[index]);
+        }
+    };
+
+    /** Removes a key and its value from the store.
+     * @method module:store/memory~MemoryStore#remove
+     * @param {String} key - Key string.
+     * @param {Function} success - Callback for a successful remove operation.
+     * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+     */
+    this.remove = function (key, success, error) {
+        error = getErrorCallback(error);
+
+        if (validateKeyInput(key, error)) {
+            var index = keys[key];
+            if (index !== undefined) {
+                if (index === items.length - 1) {
+                    items.pop();
+                } else {
+                    items[index] = undefined;
+                    holes.push(index);
+                }
+                delete keys[key];
+
+                // The last item was removed, no need to keep track of any holes in the array.
+                if (items.length === 0) {
+                    holes = [];
+                }
+            }
+
+            delay(success);
+        }
+    };
+
+    /** Updates the value associated to a key in the store.
+     * @method module:store/memory~MemoryStore#update
+     * @param {String} key - Key string.
+     * @param value - New value.
+     * @param {Function} success - Callback for a successful update operation.
+     * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
+     * This method errors out if the specified key is not found in the store.
+     */
+    this.update = function (key, value, success, error) {
+        error = getErrorCallback(error);
+        if (validateKeyInput(key, error)) {
+            if (keys.hasOwnProperty(key)) {
+                this.addOrUpdate(key, value, success, error);
+            } else {
+                error({ message: "key not found", key: key });
+            }
+        }
+    };
+}
+
+/** Creates a store object that uses memory storage as its underlying mechanism.
+ * @method MemoryStore.create
+ * @param {String} name - Store name.
+ * @returns {Object} Store object.
+ */
+MemoryStore.create = function (name) {
+    return new MemoryStore(name);
+};
+
+/** Checks whether the underlying mechanism for this kind of store objects is supported by the browser.
+ * @method MemoryStore.isSupported
+ * @returns {Boolean} True if the mechanism is supported by the browser; otherwise false.
+ */
+MemoryStore.isSupported = function () {
+    return true;
+};
+
+/** This function does nothing in MemoryStore as it does not have a connection model.
+*/
+MemoryStore.prototype.close = function () {
+};
+
+MemoryStore.prototype.defaultError = throwErrorCallback;
+
+/** Identifies the underlying mechanism used by the store.
+*/
+MemoryStore.prototype.mechanism = "memory";
+
+
+/** MemoryStore (see {@link MemoryStore}) */
+module.exports = MemoryStore;}, "utils" : function(exports, module, require) {
+'use strict';
+
+/** @module odatajs/utils */
 
 
 function inBrowser() {
@@ -5685,7 +6764,7 @@ function contains(arr, item) {
 /** Given two values, picks the first one that is not undefined.
  * @param a - First value.
  * @param b - Second value.
- * @returns a if it's a defined value; else b.</returns>
+ * @returns a if it's a defined value; else b.
  */
 function defined(a, b) {
     return (a !== undefined) ? a : b;
@@ -5712,7 +6791,6 @@ function delay(callback) {
  * @param {String} message - Message explaining the assertion.
  * @param {Object} data - Additional data to be included in the exception.
  */
-// DATAJS INTERNAL START
 function djsassert(condition, message, data) {
 
 
@@ -5720,7 +6798,6 @@ function djsassert(condition, message, data) {
         throw { message: "Assert fired: " + message, data: data };
     }
 }
-// DATAJS INTERNAL END
 
 /** Extends the target with the specified values.
  * @param {Object} target - Object to add properties to.
@@ -5808,7 +6885,7 @@ function throwErrorCallback(error) {
 }
 
 /** Removes leading and trailing whitespaces from a string.
- * @param {String str String to trim
+ * @param {String} str String to trim
  * @returns {String} The string with no leading or trailing whitespace.
  */
 function trimString(str) {
@@ -5964,7 +7041,7 @@ function normalizeURI(uri, base) {
 }
 
 /** Merges the path of a relative URI and a base URI.
- * @param {String} uriPath - Relative URI path.</param>
+ * @param {String} uriPath - Relative URI path.
  * @param {String} basePath - Base URI path.
  * @returns {String} A string with the merged path.
  */
@@ -6200,12 +7277,11 @@ exports.sliceJsonValueArray = sliceJsonValueArray;
 exports.concatJsonValueArray = concatJsonValueArray;
 exports.startsWith = startsWith;
 exports.endsWith = endsWith;
-exports.getFormatKind = getFormatKind;
-},{}],14:[function(require,module,exports){
-
+exports.getFormatKind = getFormatKind;}, "xml" : function(exports, module, require) {
+'use strict';
  
 
-/** @module datajs/xml */
+/** @module odatajs/xml */
 
 var utils    = require('./utils.js');
 
@@ -6362,7 +7438,12 @@ function xmlThrowParserError(exceptionOrReason, srcText, errorXmlText) {
  * This function will throw an exception in case of a parse error
  */
 function xmlParse(text) {
-    var domParser = window.DOMParser && new window.DOMParser();
+    var domParser = undefined;
+    if (utils.inBrowser()) {
+        domParser = window.DOMParser && new window.DOMParser();
+    } else {
+        domParser = new (require('xmldom').DOMParser)();
+    }
     var dom;
 
     if (!domParser) {
@@ -6422,7 +7503,7 @@ function xmlQualifiedName(prefix, name) {
 
 /** Appends a text node into the specified DOM element node.
  * @param domNode - DOM node for the element.
- * @param {String} text - Text to append as a child of element.
+ * @param {String} textNode - Text to append as a child of element.
 */
 function xmlAppendText(domNode, textNode) {
     if (hasLeadingOrTrailingWhitespace(textNode.data)) {
@@ -6490,7 +7571,7 @@ function xmlBaseURI(domNode, baseURI) {
 
 
 /** Iterates through the XML element's child DOM elements and invokes the callback function for each one.
- * @param element - DOM Node containing the DOM elements to iterate over.
+ * @param domNode - DOM Node containing the DOM elements to iterate over.
  * @param {Function} onElementCallback - Callback function to invoke for each child DOM element.
 */
 function xmlChildElements(domNode, onElementCallback) {
@@ -6525,7 +7606,7 @@ function xmlFindElementByPath(root, namespaceURI, path) {
  * @param root - DOM element node from which to get the descendant node.
  * @param {String} namespaceURI - The namespace URI of the node to match.
  * @param {String} path - Path to the desired descendant node.
- * @return The node specified by path and namespace URI.</returns>
+ * @return The node specified by path and namespace URI.
 
 * This function will traverse the path and match each node associated to a path segement against the namespace URI.
 * The traversal stops when the whole path has been exahusted or a node that doesn't belogong the specified namespace is encountered.
@@ -6552,7 +7633,7 @@ function xmlFindNodeByPath(root, namespaceURI, path) {
  * @param domNode - DOM node from which the child DOM element is going to be retrieved.
  * @param {String} [namespaceURI] - 
  * @param {String} [localName] - 
- * @return The node's first child DOM element that matches the specified namespace URI and local name; null otherwise.</returns>
+ * @return The node's first child DOM element that matches the specified namespace URI and local name; null otherwise.
  */
 function xmlFirstChildElement(domNode, namespaceURI, localName) {
 
@@ -6600,7 +7681,7 @@ function xmlFirstElementMaybeRecursive(domNode, namespaceURI, localName, recursi
 }
 
 /** Gets the concatenated value of all immediate child text and CDATA nodes for the specified element.
- * @param domElement - Element to get values for.
+ * @param xmlElement - Element to get values for.
  * @returns {String} Text for all direct children.
  */
 function xmlInnerText(xmlElement) {
@@ -6656,7 +7737,7 @@ function xmlLocalName(domNode) {
 }
 
 /** Returns the namespace URI of a XML node.
- * @param node - DOM node to get the value from.
+ * @param domNode - DOM node to get the value from.
  * @returns {String} Namespace URI of domNode.
  */
 function xmlNamespaceURI(domNode) {
@@ -6665,7 +7746,7 @@ function xmlNamespaceURI(domNode) {
 }
 
 /** Returns the value or the inner text of a XML node.
- * @param node - DOM node to get the value from.
+ * @param domNode - DOM node to get the value from.
  * @return Value of the domNode or the inner text if domNode represents a DOM element node.
  */
 function xmlNodeValue(domNode) {
@@ -6681,6 +7762,7 @@ function xmlNodeValue(domNode) {
  * @param {Boolean} recursive
  * - True if the traversal should include all the descenants of the DOM node.
  * - False if the traversal should be scoped only to the direct children of the DOM node.
+ * @param {Boolean} onChildCallback - Called for each child
  * @returns {String} Namespace URI of node.
  */
 function xmlTraverse(domNode, recursive, onChildCallback) {
@@ -6703,7 +7785,7 @@ function xmlTraverse(domNode, recursive, onChildCallback) {
  * @param domNode - DOM node from which the next sibling is going to be retrieved.
  * @param {String} [namespaceURI] - 
  * @param {String} [localName] - 
- * @return The node's next sibling DOM element, null if there is none.</returns>
+ * @return The node's next sibling DOM element, null if there is none.
  */
 function xmlSiblingElement(domNode, namespaceURI, localName) {
 
@@ -6723,7 +7805,7 @@ function xmlSiblingElement(domNode, namespaceURI, localName) {
 }
 
 /** Creates a new empty DOM document node.
- * @return New DOM document node.</returns>
+ * @return New DOM document node.
  *
  * This function will first try to create a native DOM document using
  * the browsers createDocument function.  If the browser doesn't
@@ -6742,7 +7824,7 @@ function xmlDom() {
 /** Appends a collection of child nodes or string values to a parent DOM node.
  * @param parent - DOM node to which the children will be appended.
  * @param {Array} children - Array containing DOM nodes or string values that will be appended to the parent.
- * @return The parent with the appended children or string values.</returns>
+ * @return The parent with the appended children or string values.
  *  If a value in the children collection is a string, then a new DOM text node is going to be created
  *  for it and then appended to the parent.
  */
@@ -6761,7 +7843,7 @@ function xmlAppendChildren(parent, children) {
 /** Appends a child node or a string value to a parent DOM node.
  * @param parent - DOM node to which the child will be appended.
  * @param child - Child DOM node or string value to append to the parent.
- * @return The parent with the appended child or string value.</returns>
+ * @return The parent with the appended child or string value.
  * If child is a string value, then a new DOM text node is going to be created
  * for it and then appended to the parent.
  */
@@ -6783,8 +7865,9 @@ function xmlAppendChild(parent, child) {
 
 /** Creates a new DOM attribute node.
  * @param dom - DOM document used to create the attribute.
- * @param {String} prefix - Namespace prefix.
  * @param {String} namespaceURI - Namespace URI.
+ * @param {String} qualifiedName - Qualified OData name
+ * @param {String} value - Value of the new attribute
  * @return DOM attribute node for the namespace declaration.
  */
 function xmlNewAttribute(dom, namespaceURI, qualifiedName, value) {
@@ -6802,11 +7885,11 @@ function xmlNewAttribute(dom, namespaceURI, qualifiedName, value) {
  * @param {String} namespaceURI - Namespace URI of the new DOM element.
  * @param {String} qualifiedName - Qualified name in the form of "prefix:name" of the new DOM element.
  * @param {Array} [children] Collection of child DOM nodes or string values that are going to be appended to the new DOM element.
- * @return New DOM element.</returns>
+ * @return New DOM element.
  * If a value in the children collection is a string, then a new DOM text node is going to be created
  * for it and then appended to the new DOM element.
  */
-function xmlNewElement(dom, nampespaceURI, qualifiedName, children) {
+function xmlNewElement(dom, namespaceURI, qualifiedName, children) {
     var element =
         dom.createElementNS && dom.createElementNS(nampespaceURI, qualifiedName) ||
         dom.createNode(1, qualifiedName, nampespaceURI || undefined);
@@ -6818,7 +7901,7 @@ function xmlNewElement(dom, nampespaceURI, qualifiedName, children) {
  * @param dom - DOM document used to create the attribute.
  * @param {String} namespaceURI - Namespace URI.
  * @param {String} prefix - Namespace prefix.
- * @return DOM attribute node for the namespace declaration.</returns>
+ * @return DOM attribute node for the namespace declaration.
  */
 function xmlNewNSDeclaration(dom, namespaceURI, prefix) {
     return xmlNewAttribute(dom, xmlnsNS, xmlQualifiedName("xmlns", prefix), namespaceURI);
@@ -6848,7 +7931,7 @@ function xmlNewFragment(dom, text) {
 /** Creates new DOM text node.
  * @param dom - DOM document used to create the text node.
  * @param {String} text - Text value for the DOM text node.
- * @return DOM text node.</returns>
+ * @return DOM text node.
  */ 
 function xmlNewText(dom, text) {
     return dom.createTextNode(text);
@@ -6858,9 +7941,9 @@ function xmlNewText(dom, text) {
  * @param dom - DOM document used to create the new node.
  * @param root - DOM element node used as root of the subtree on which the new nodes are going to be created.
  * @param {String} namespaceURI - Namespace URI of the new DOM element or attribute.
- * @param {String} namespacePrefix - Prefix used to qualify the name of the new DOM element or attribute.
- * @param {String} Path - Path string describing the location of the new DOM element or attribute from the root element.
- * @return DOM element or attribute node for the last segment of the path.</returns>
+ * @param {String} prefix - Prefix used to qualify the name of the new DOM element or attribute.
+ * @param {String} path - Path string describing the location of the new DOM element or attribute from the root element.
+ * @return DOM element or attribute node for the last segment of the path.
 
  * This function will traverse the path and will create a new DOM element with the specified namespace URI and prefix
  * for each segment that doesn't have a matching element under root.
@@ -6894,7 +7977,7 @@ function xmlNewNodeByPath(dom, root, namespaceURI, prefix, path) {
 }
 
 /** Returns the text representation of the document to which the specified node belongs.
- * @param root - Wrapped element in the document to serialize.
+ * @param domNode - Wrapped element in the document to serialize.
  * @returns {String} Serialized document.
 */
 function xmlSerialize(domNode) {
@@ -6912,7 +7995,7 @@ function xmlSerialize(domNode) {
 }
 
 /** Returns the XML representation of the all the descendants of the node.
- * @param domNode - Node to serialize.</param>
+ * @param domNode - Node to serialize.
  * @returns {String} The XML representation of all the descendants of the node.
  */
 function xmlSerializeDescendants(domNode) {
@@ -7001,1025 +8084,26 @@ exports.xmlQualifiedName = xmlQualifiedName;
 exports.xmlSerialize = xmlSerialize;
 exports.xmlSerializeDescendants = xmlSerializeDescendants;
 exports.xmlSiblingElement = xmlSiblingElement;
+}};
 
-},{"./utils.js":13}],15:[function(require,module,exports){
+var modules = {};
 
-
- /** @module store */
-
-
-
-
-
-exports.defaultStoreMechanism = "best";
-
-/** Creates a new store object.
- * @param {String} name - Store name.
- * @param {String} [mechanism] - 
- * @returns {Object} Store object.
-*/
-exports.createStore = function (name, mechanism) {
-
-
-    if (!mechanism) {
-        mechanism = exports.defaultStoreMechanism;
-    }
-
-    if (mechanism === "best") {
-        mechanism = (DomStore.isSupported()) ? "dom" : "memory";
-    }
-
-    var factory = mechanisms[mechanism];
-    if (factory) {
-        return factory.create(name);
-    }
-
-    throw { message: "Failed to create store", name: name, mechanism: mechanism };
-};
-
-exports.mechanisms = mechanisms;
-
-
-exports.DomStore       = DomStore       = require('./store/dom.js');
-exports.IndexedDBStore = IndexedDBStore = require('./store/indexeddb.js');
-exports.MemoryStore    = MemoryStore    = require('./store/memory.js');
-
-var mechanisms = {
-    indexeddb: IndexedDBStore,
-    dom: DomStore,
-    memory: MemoryStore
-};
-},{"./store/dom.js":16,"./store/indexeddb.js":17,"./store/memory.js":18}],16:[function(require,module,exports){
-
-
-/** @module store/dom */
-
-
-
-var utils = require('./../odatajs.js').utils;
-
-// Imports.
-var throwErrorCallback = utils.throwErrorCallback;
-var delay = utils.delay;
-
-var localStorage = null;
-
-/** This method is used to override the Date.toJSON method and is called only by
- * JSON.stringify.  It should never be called directly.
- * @summary Converts a Date object into an object representation friendly to JSON serialization.
- * @returns {Object} Object that represents the Date.
- */
-function domStoreDateToJSON() {
-    var newValue = { v: this.valueOf(), t: "[object Date]" };
-    // Date objects might have extra properties on them so we save them.
-    for (var name in this) {
-        newValue[name] = this[name];
-    }
-    return newValue;
-}
-
-/** This method is used during JSON parsing and invoked only by the reviver function.
- * It should never be called directly.
- * @summary JSON reviver function for converting an object representing a Date in a JSON stream to a Date object
- * @param Object - Object to convert.
- * @returns {Date} Date object.
- */
-function domStoreJSONToDate(_, value) {
-    if (value && value.t === "[object Date]") {
-        var newValue = new Date(value.v);
-        for (var name in value) {
-            if (name !== "t" && name !== "v") {
-                newValue[name] = value[name];
-            }
-        }
-        value = newValue;
-    }
-    return value;
-}
-
-/** Qualifies the key with the name of the store.
- * @param {Object} store - Store object whose name will be used for qualifying the key.
- * @param {String} key - Key string.
- * @returns {String} Fully qualified key string.
- */
-function qualifyDomStoreKey(store, key) {
-    return store.name + "#!#" + key;
-}
-
-/** Gets the key part of a fully qualified key string.
- * @param {Object} store - Store object whose name will be used for qualifying the key.
- * @param {String} key - Fully qualified key string.
- * @returns {String} Key part string
- */
-function unqualifyDomStoreKey(store, key) {
-    return key.replace(store.name + "#!#", "");
-}
-
-/** Constructor for store objects that use DOM storage as the underlying mechanism.
- * @class DomStore
- * @constructor
- * @param {String} name - Store name.
- */
-function DomStore(name) {
-    this.name = name;
-}
-
-/** Creates a store object that uses DOM Storage as its underlying mechanism.
- * @method module:store/dom~DomStore.create
- * @param {String} name - Store name.
- * @returns {Object} Store object.
- */
-DomStore.create = function (name) {
-
-    if (DomStore.isSupported()) {
-        localStorage = localStorage || window.localStorage;
-        return new DomStore(name);
-    }
-
-    throw { message: "Web Storage not supported by the browser" };
-};
-
-/** Checks whether the underlying mechanism for this kind of store objects is supported by the browser.
- * @method DomStore.isSupported
- * @returns {Boolean} - True if the mechanism is supported by the browser; otherwise false.
-*/
-DomStore.isSupported = function () {
-    return !!window.localStorage;
-};
-
-/** Adds a new value identified by a key to the store.
- * @method module:store/dom~DomStore#add
- * @param {String} key - Key string.
- * @param value - Value that is going to be added to the store.
- * @param {Funcktion} success - Callback for a successful add operation.</param>
- * @param {Funcktion} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
- * This method errors out if the store already contains the specified key.
- */
-DomStore.prototype.add = function (key, value, success, error) {
-    error = error || this.defaultError;
-    var store = this;
-    this.contains(key, function (contained) {
-        if (!contained) {
-            store.addOrUpdate(key, value, success, error);
-        } else {
-            delay(error, { message: "key already exists", key: key });
-        }
-    }, error);
-};
-
-/** This method will overwrite the key's current value if it already exists in the store; otherwise it simply adds the new key and value.
- * @summary Adds or updates a value identified by a key to the store.
- * @method module:store/dom~DomStore#addOrUpdate
- * @param {String} key - Key string.
- * @param value - Value that is going to be added or updated to the store.
- * @param {Function} success - Callback for a successful add or update operation.</param>
- * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
- */
-DomStore.prototype.addOrUpdate = function (key, value, success, error) {
-    error = error || this.defaultError;
-
-    if (key instanceof Array) {
-        error({ message: "Array of keys not supported" });
-    } else {
-        var fullKey = qualifyDomStoreKey(this, key);
-        var oldDateToJSON = Date.prototype.toJSON;
-        try {
-            var storedValue = value;
-            if (storedValue !== undefined) {
-                // Dehydrate using json
-                Date.prototype.toJSON = domStoreDateToJSON;
-                storedValue = window.JSON.stringify(value);
-            }
-            // Save the json string.
-            localStorage.setItem(fullKey, storedValue);
-            delay(success, key, value);
-        }
-        catch (e) {
-            if (e.code === 22 || e.number === 0x8007000E) {
-                delay(error, { name: "QUOTA_EXCEEDED_ERR", error: e });
-            } else {
-                delay(error, e);
-            }
-        }
-        finally {
-            Date.prototype.toJSON = oldDateToJSON;
-        }
-    }
-};
-
-/** In case of an error, this method will not restore any keys that might have been deleted at that point.
- * @summary Removes all the data associated with this store object.
- * @method module:store/dom~DomStore#clear
- * @param {Function} success - Callback for a successful clear operation.</param>
- * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
- */
-DomStore.prototype.clear = function (success, error) {
-
-    error = error || this.defaultError;
-    try {
-        var i = 0, len = localStorage.length;
-        while (len > 0 && i < len) {
-            var fullKey = localStorage.key(i);
-            var key = unqualifyDomStoreKey(this, fullKey);
-            if (fullKey !== key) {
-                localStorage.removeItem(fullKey);
-                len = localStorage.length;
-            } else {
-                i++;
-            }
-        }
-        delay(success);
-    }
-    catch (e) {
-        delay(error, e);
-    }
-};
-
-/** This function does nothing in DomStore as it does not have a connection model
- * @method module:store/dom~DomStore#close
- */
-DomStore.prototype.close = function () {
-};
-
-/** Checks whether a key exists in the store.
- * @method module:store/dom~DomStore#contains
- * @param {String} key - Key string.
- * @param {Function} success - Callback indicating whether the store contains the key or not.</param>
- * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
-*/
-DomStore.prototype.contains = function (key, success, error) {
-    error = error || this.defaultError;
-    try {
-        var fullKey = qualifyDomStoreKey(this, key);
-        var value = localStorage.getItem(fullKey);
-        delay(success, value !== null);
-    } catch (e) {
-        delay(error, e);
-    }
-};
-
-DomStore.prototype.defaultError = throwErrorCallback;
-
-/** Gets all the keys that exist in the store.
- * @method module:store/dom~DomStore#getAllKeys
- * @param {Function} success - Callback for a successful get operation.</param>
- * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
- */
-DomStore.prototype.getAllKeys = function (success, error) {
-
-    error = error || this.defaultError;
-
-    var results = [];
-    var i, len;
-
-    try {
-        for (i = 0, len = localStorage.length; i < len; i++) {
-            var fullKey = localStorage.key(i);
-            var key = unqualifyDomStoreKey(this, fullKey);
-            if (fullKey !== key) {
-                results.push(key);
-            }
-        }
-        delay(success, results);
-    }
-    catch (e) {
-        delay(error, e);
-    }
-};
-
-/** Identifies the underlying mechanism used by the store.*/
-DomStore.prototype.mechanism = "dom";
-
-/** Reads the value associated to a key in the store.
- * @method module:store/dom~DomStore#read
- * @param {String} key - Key string.
- * @param {Function} success - Callback for a successful reads operation.
- * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.
- */
-DomStore.prototype.read = function (key, success, error) {
-
-    error = error || this.defaultError;
-
-    if (key instanceof Array) {
-        error({ message: "Array of keys not supported" });
-    } else {
-        try {
-            var fullKey = qualifyDomStoreKey(this, key);
-            var value = localStorage.getItem(fullKey);
-            if (value !== null && value !== "undefined") {
-                // Hydrate using json
-                value = window.JSON.parse(value, domStoreJSONToDate);
-            }
-            else {
-                value = undefined;
-            }
-            delay(success, key, value);
-        } catch (e) {
-            delay(error, e);
-        }
-    }
-};
-
-/** Removes a key and its value from the store.
- * @method module:store/dom~DomStore#remove
- * @param {String} key - Key string.
- * @param {Funtion} success - Callback for a successful remove operation.</param>
- * @param {Funtion} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
- */
-DomStore.prototype.remove = function (key, success, error) {
-    error = error || this.defaultError;
-
-    if (key instanceof Array) {
-        error({ message: "Batches not supported" });
-    } else {
-        try {
-            var fullKey = qualifyDomStoreKey(this, key);
-            localStorage.removeItem(fullKey);
-            delay(success);
-        } catch (e) {
-            delay(error, e);
-        }
-    }
-};
-
-/** Updates the value associated to a key in the store.
- * @method module:store/dom~DomStore#update
- * @param {String} key - Key string.
- * @param value - New value.
- * @param {Function} success - Callback for a successful update operation.
- * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked
- * This method errors out if the specified key is not found in the store.
- */
-DomStore.prototype.update = function (key, value, success, error) {
-    error = error || this.defaultError;
-    var store = this;
-    this.contains(key, function (contained) {
-        if (contained) {
-            store.addOrUpdate(key, value, success, error);
-        } else {
-            delay(error, { message: "key not found", key: key });
-        }
-    }, error);
-};
-
-module.exports = DomStore;
-},{"./../odatajs.js":11}],17:[function(require,module,exports){
-
-
-/** @module store/indexeddb */
-var utils = require('./../odatajs.js').utils;
-
-// Imports.
-var throwErrorCallback = utils.throwErrorCallback;
-var delay = utils.delay;
-
-
-var indexedDB = utils.inBrowser() ? window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.indexedDB : undefined;
-var IDBKeyRange = utils.inBrowser() ? window.IDBKeyRange || window.webkitIDBKeyRange : undefined;
-var IDBTransaction = utils.inBrowser() ? window.IDBTransaction || window.webkitIDBTransaction || {} : {} ;
-
-var IDBT_READ_ONLY = IDBTransaction.READ_ONLY || "readonly";
-var IDBT_READ_WRITE = IDBTransaction.READ_WRITE || "readwrite";
-
-/** Returns either a specific error handler or the default error handler
- * @param {Function} error - The specific error handler
- * @param {Function} defaultError - The default error handler
- * @returns {Function} The error callback
- */
-function getError(error, defaultError) {
-
-    return function (e) {
-        var errorFunc = error || defaultError;
-        if (!errorFunc) {
-            return;
+(function() {
+    var require = function(path) {
+        var name = path.substring(path.lastIndexOf('/') + 1, path.length - 3);
+        if (modules[name]) {
+            return modules[name].exports;
         }
 
-        // Old api quota exceeded error support.
-        if (Object.prototype.toString.call(e) === "[object IDBDatabaseException]") {
-            if (e.code === 11 /* IndexedDb disk quota exceeded */) {
-                errorFunc({ name: "QuotaExceededError", error: e });
-                return;
-            }
-            errorFunc(e);
-            return;
+        modules[name] = { exports: {} };
+        console.log(name);
+        if (name === 'sou') {
+            var i = 0;
         }
-
-        var errName;
-        try {
-            var errObj = e.target.error || e;
-            errName = errObj.name;
-        } catch (ex) {
-            errName = (e.type === "blocked") ? "IndexedDBBlocked" : "UnknownError";
-        }
-        errorFunc({ name: errName, error: e });
-    };
-}
-
-/** Opens the store object's indexed db database.
- * @param {IndexedDBStore} store - The store object
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-function openStoreDb(store, success, error) {
-
-    var storeName = store.name;
-    var dbName = "_datajs_" + storeName;
-
-    var request = indexedDB.open(dbName);
-    request.onblocked = error;
-    request.onerror = error;
-
-    request.onupgradeneeded = function () {
-        var db = request.result;
-        if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName);
-        }
+        datas[name].call(this, modules[name].exports, modules[name], require);
+        return modules[name].exports;
     };
 
-    request.onsuccess = function (event) {
-        var db = request.result;
-        if (!db.objectStoreNames.contains(storeName)) {
-            // Should we use the old style api to define the database schema?
-            if ("setVersion" in db) {
-                var versionRequest = db.setVersion("1.0");
-                versionRequest.onsuccess = function () {
-                    var transaction = versionRequest.transaction;
-                    transaction.oncomplete = function () {
-                        success(db);
-                    };
-                    db.createObjectStore(storeName, null, false);
-                };
-                versionRequest.onerror = error;
-                versionRequest.onblocked = error;
-                return;
-            }
-
-            // The database doesn't have the expected store.
-            // Fabricate an error object for the event for the schema mismatch
-            // and error out.
-            event.target.error = { name: "DBSchemaMismatch" };
-            error(event);
-            return;
-        }
-
-        db.onversionchange = function(event) {
-            event.target.close();
-        };
-        success(db);
-    };
-}
-
-/** Opens a new transaction to the store
- * @param {IndexedDBStore} store - The store object
- * @param {Short} mode - The read/write mode of the transaction (constants from IDBTransaction)
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-function openTransaction(store, mode, success, error) {
-
-    var storeName = store.name;
-    var storeDb = store.db;
-    var errorCallback = getError(error, store.defaultError);
-
-    if (storeDb) {
-        success(storeDb.transaction(storeName, mode));
-        return;
-    }
-
-    openStoreDb(store, function (db) {
-        store.db = db;
-        success(db.transaction(storeName, mode));
-    }, errorCallback);
-}
-
-/** Creates a new IndexedDBStore.
- * @class IndexedDBStore
- * @constructor
- * @param {String} name - The name of the store.
- * @returns {Object} The new IndexedDBStore.
- */
-function IndexedDBStore(name) {
-    this.name = name;
-}
-
-/** Creates a new IndexedDBStore.
- * @method module:store/indexeddb~IndexedDBStore.create
- * @param {String} name - The name of the store.
- * @returns {Object} The new IndexedDBStore.
- */
-IndexedDBStore.create = function (name) {
-    if (IndexedDBStore.isSupported()) {
-        return new IndexedDBStore(name);
-    }
-
-    throw { message: "IndexedDB is not supported on this browser" };
-};
-
-/** Returns whether IndexedDB is supported.
- * @method module:store/indexeddb~IndexedDBStore.isSupported
- * @returns {Boolean} True if IndexedDB is supported, false otherwise.
- */
-IndexedDBStore.isSupported = function () {
-    return !!indexedDB;
-};
-
-/** Adds a key/value pair to the store
- * @method module:store/indexeddb~IndexedDBStore#add
- * @param {String} key - The key
- * @param {Object} value - The value
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
-*/
-IndexedDBStore.prototype.add = function (key, value, success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    var keys = [];
-    var values = [];
-
-    if (key instanceof Array) {
-        keys = key;
-        values = value;
-    } else {
-        keys = [key];
-        values = [value];
-    }
-
-    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
-        transaction.onabort = getError(error, defaultError, key, "add");
-        transaction.oncomplete = function () {
-            if (key instanceof Array) {
-                success(keys, values);
-            } else {
-                success(key, value);
-            }
-        };
-
-        for (var i = 0; i < keys.length && i < values.length; i++) {
-            transaction.objectStore(name).add({ v: values[i] }, keys[i]);
-        }
-    }, error);
-};
-
-/** Adds or updates a key/value pair in the store
- * @method module:store/indexeddb~IndexedDBStore#addOrUpdate
- * @param {String} key - The key
- * @param {Object} value - The value
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-IndexedDBStore.prototype.addOrUpdate = function (key, value, success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    var keys = [];
-    var values = [];
-
-    if (key instanceof Array) {
-        keys = key;
-        values = value;
-    } else {
-        keys = [key];
-        values = [value];
-    }
-
-    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
-        transaction.onabort = getError(error, defaultError);
-        transaction.oncomplete = function () {
-            if (key instanceof Array) {
-                success(keys, values);
-            } else {
-                success(key, value);
-            }
-        };
-
-        for (var i = 0; i < keys.length && i < values.length; i++) {
-            var record = { v: values[i] };
-            transaction.objectStore(name).put(record, keys[i]);
-        }
-    }, error);
-};
-
-/** Clears the store
- * @method module:store/indexeddb~IndexedDBStore#clear
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-IndexedDBStore.prototype.clear = function (success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
-        transaction.onerror = getError(error, defaultError);
-        transaction.oncomplete = function () {
-            success();
-        };
-
-        transaction.objectStore(name).clear();
-    }, error);
-};
-/** Closes the connection to the database
- * @method module:store/indexeddb~IndexedDBStore#close
-*/
-IndexedDBStore.prototype.close = function () {
-    
-    if (this.db) {
-        this.db.close();
-        this.db = null;
-    }
-};
-
-/** Returns whether the store contains a key
- * @method module:store/indexeddb~IndexedDBStore#contains
- * @param {String} key - The key
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-IndexedDBStore.prototype.contains = function (key, success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    openTransaction(this, IDBT_READ_ONLY, function (transaction) {
-        var objectStore = transaction.objectStore(name);
-        var request = objectStore.get(key);
-
-        transaction.oncomplete = function () {
-            success(!!request.result);
-        };
-        transaction.onerror = getError(error, defaultError);
-    }, error);
-};
-
-IndexedDBStore.prototype.defaultError = throwErrorCallback;
-
-/** Gets all the keys from the store
- * @method module:store/indexeddb~IndexedDBStore#getAllKeys
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-IndexedDBStore.prototype.getAllKeys = function (success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
-        var results = [];
-
-        transaction.oncomplete = function () {
-            success(results);
-        };
-
-        var request = transaction.objectStore(name).openCursor();
-
-        request.onerror = getError(error, defaultError);
-        request.onsuccess = function (event) {
-            var cursor = event.target.result;
-            if (cursor) {
-                results.push(cursor.key);
-                // Some tools have issues because continue is a javascript reserved word.
-                cursor["continue"].call(cursor);
-            }
-        };
-    }, error);
-};
-
-/** Identifies the underlying mechanism used by the store.
-*/
-IndexedDBStore.prototype.mechanism = "indexeddb";
-
-/** Reads the value for the specified key
- * @method module:store/indexeddb~IndexedDBStore#read
- * @param {String} key - The key
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- * If the key does not exist, the success handler will be called with value = undefined
- */
-IndexedDBStore.prototype.read = function (key, success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    var keys = (key instanceof Array) ? key : [key];
-
-    openTransaction(this, IDBT_READ_ONLY, function (transaction) {
-        var values = [];
-
-        transaction.onerror = getError(error, defaultError, key, "read");
-        transaction.oncomplete = function () {
-            if (key instanceof Array) {
-                success(keys, values);
-            } else {
-                success(keys[0], values[0]);
-            }
-        };
-
-        for (var i = 0; i < keys.length; i++) {
-            // Some tools have issues because get is a javascript reserved word. 
-            var objectStore = transaction.objectStore(name);
-            var request = objectStore.get.call(objectStore, keys[i]);
-            request.onsuccess = function (event) {
-                var record = event.target.result;
-                values.push(record ? record.v : undefined);
-            };
-        }
-    }, error);
-};
-
-/** Removes the specified key from the store
- * @method module:store/indexeddb~IndexedDBStore#remove
- * @param {String} key - The key
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-IndexedDBStore.prototype.remove = function (key, success, error) {
-
-    var name = this.name;
-    var defaultError = this.defaultError;
-    var keys = (key instanceof Array) ? key : [key];
-
-    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
-        transaction.onerror = getError(error, defaultError);
-        transaction.oncomplete = function () {
-            success();
-        };
-
-        for (var i = 0; i < keys.length; i++) {
-            // Some tools have issues because continue is a javascript reserved word.
-            var objectStore = transaction.objectStore(name);
-            objectStore["delete"].call(objectStore, keys[i]);
-        }
-    }, error);
-};
-
-/** Updates a key/value pair in the store
- * @method module:store/indexeddb~IndexedDBStore#update
- * @param {String} key - The key
- * @param {Object} value - The value
- * @param {Function} success - The success callback
- * @param {Function} error - The error callback
- */
-IndexedDBStore.prototype.update = function (key, value, success, error) {
-    var name = this.name;
-    var defaultError = this.defaultError;
-    var keys = [];
-    var values = [];
-
-    if (key instanceof Array) {
-        keys = key;
-        values = value;
-    } else {
-        keys = [key];
-        values = [value];
-    }
-
-    openTransaction(this, IDBT_READ_WRITE, function (transaction) {
-        transaction.onabort = getError(error, defaultError);
-        transaction.oncomplete = function () {
-            if (key instanceof Array) {
-                success(keys, values);
-            } else {
-                success(key, value);
-            }
-        };
-
-        for (var i = 0; i < keys.length && i < values.length; i++) {
-            var request = transaction.objectStore(name).openCursor(IDBKeyRange.only(keys[i]));
-            var record = { v: values[i] };
-            request.pair = { key: keys[i], value: record };
-            request.onsuccess = function (event) {
-                var cursor = event.target.result;
-                if (cursor) {
-                    cursor.update(event.target.pair.value);
-                } else {
-                    transaction.abort();
-                }
-            }
-        }
-    }, error);
-};
-
-
-module.exports = IndexedDBStore;
-},{"./../odatajs.js":11}],18:[function(require,module,exports){
-
-
-/** @module store/memory */
-
-
-var utils = require('./../odatajs.js').utils;
-
-// Imports.
-var throwErrorCallback = utils.throwErrorCallback;
-var delay = utils.delay;
-
-/** Constructor for store objects that use a sorted array as the underlying mechanism.
- * @class MemoryStore
- * @constructor
- * @param {String} name - Store name.
- */
-function MemoryStore(name) {
-
-    var holes = [];
-    var items = [];
-    var keys = {};
-
-    this.name = name;
-
-    var getErrorCallback = function (error) {
-        return error || this.defaultError;
-    };
-
-    /** Validates that the specified key is not undefined, not null, and not an array
-     * @param key - Key value.
-     * @param {Function} error - Error callback.
-     * @returns {Boolean} True if the key is valid. False if the key is invalid and the error callback has been queued for execution.
-     */
-    function validateKeyInput(key, error) {
-
-        var messageString;
-
-        if (key instanceof Array) {
-            messageString = "Array of keys not supported";
-        }
-
-        if (key === undefined || key === null) {
-            messageString = "Invalid key";
-        }
-
-        if (messageString) {
-            delay(error, { message: messageString });
-            return false;
-        }
-        return true;
-    }
-
-    /** This method errors out if the store already contains the specified key.
-     * @summery Adds a new value identified by a key to the store.
-     * @method module:store/memory~MemoryStore#add
-     * @param {String} key - Key string.
-     * @param value - Value that is going to be added to the store.
-     * @param {Function} success - Callback for a successful add operation.</param>
-     * @param {Function} error - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
-     */
-    this.add = function (key, value, success, error) {
-        error = getErrorCallback(error);
-
-        if (validateKeyInput(key, error)) {
-            if (!keys.hasOwnProperty(key)) {
-                this.addOrUpdate(key, value, success, error);
-            } else {
-                error({ message: "key already exists", key: key });
-            }
-        }
-    };
-
-    /** This method will overwrite the key's current value if it already exists in the store; otherwise it simply adds the new key and value.
-     * @summary Adds or updates a value identified by a key to the store.
-     * @method module:store/memory~MemoryStore#addOrUpdate
-     * @param {String} key - Key string.
-     * @param value - Value that is going to be added or updated to the store.
-     * @param {Function} success - Callback for a successful add or update operation.</param>
-     * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
-    */
-    this.addOrUpdate = function (key, value, success, error) {
-        
-        error = getErrorCallback(error);
-
-        if (validateKeyInput(key, error)) {
-            var index = keys[key];
-            if (index === undefined) {
-                if (holes.length > 0) {
-                    index = holes.splice(0, 1);
-                } else {
-                    index = items.length;
-                }
-            }
-            items[index] = value;
-            keys[key] = index;
-            delay(success, key, value);
-        }
-    };
-
-    /** Removes all the data associated with this store object.
-     * @method module:store/memory~MemoryStore#clear
-     * @param {Function} success>Callback for a successful clear operation.
-     */
-    this.clear = function (success) {
-        items = [];
-        keys = {};
-        holes = [];
-        delay(success);
-    };
-
-    /** Checks whether a key exists in the store.
-     * @method module:store/memory~MemoryStore#contains
-     * @param {String} key - Key string.
-     * @param {Funktion} success - Callback indicating whether the store contains the key or not.</param>
-     */
-    this.contains = function (key, success) {
-        var contained = keys.hasOwnProperty(key);
-        delay(success, contained);
-    };
-
-    /** Gets all the keys that exist in the store.
-     * @method module:store/memory~MemoryStore#getAllKeys
-     * @param {Function} success - Callback for a successful get operation.</param>
-     */
-    this.getAllKeys = function (success) {
-
-        var results = [];
-        for (var name in keys) {
-            results.push(name);
-        }
-        delay(success, results);
-    };
-
-    /** Reads the value associated to a key in the store.
-     * @method module:store/memory~MemoryStore#read
-     * @param {String} key - Key string.
-     * @param {Function} Function - Callback for a successful reads operation.</param>
-     * @param {Function{}Function - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
-     */
-    this.read = function (key, success, error) {
-        error = getErrorCallback(error);
-
-        if (validateKeyInput(key, error)) {
-            var index = keys[key];
-            delay(success, key, items[index]);
-        }
-    };
-
-    /** Removes a key and its value from the store.
-     * @method module:store/memory~MemoryStore#remove
-     * @param {String} key - Key string.
-     * @param {Function} success - Callback for a successful remove operation.</param>
-     * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
-     */
-    this.remove = function (key, success, error) {
-        error = getErrorCallback(error);
-
-        if (validateKeyInput(key, error)) {
-            var index = keys[key];
-            if (index !== undefined) {
-                if (index === items.length - 1) {
-                    items.pop();
-                } else {
-                    items[index] = undefined;
-                    holes.push(index);
-                }
-                delete keys[key];
-
-                // The last item was removed, no need to keep track of any holes in the array.
-                if (items.length === 0) {
-                    holes = [];
-                }
-            }
-
-            delay(success);
-        }
-    };
-
-    /** Updates the value associated to a key in the store.
-     * @method module:store/memory~MemoryStore#update
-     * @param {String} key - Key string.
-     * @param value - New value.
-     * @param {Function} success - Callback for a successful update operation.</param>
-     * @param {Function} [error] - Callback for handling errors. If not specified then store.defaultError is invoked.</param>
-     * This method errors out if the specified key is not found in the store.
-     */
-    this.update = function (key, value, success, error) {
-        error = getErrorCallback(error);
-        if (validateKeyInput(key, error)) {
-            if (keys.hasOwnProperty(key)) {
-                this.addOrUpdate(key, value, success, error);
-            } else {
-                error({ message: "key not found", key: key });
-            }
-        }
-    };
-}
-
-/** Creates a store object that uses memory storage as its underlying mechanism.
- * @method MemoryStore.create
- * @param {String} name - Store name.
- * @returns {Object} Store object.
- */
-MemoryStore.create = function (name) {
-    return new MemoryStore(name);
-};
-
-/** Checks whether the underlying mechanism for this kind of store objects is supported by the browser.
- * @method MemoryStore.isSupported
- * @returns {Boolean} True if the mechanism is supported by the browser; otherwise false.
- */
-MemoryStore.isSupported = function () {
-    return true;
-};
-
-/** This function does nothing in MemoryStore as it does not have a connection model.
-*/
-MemoryStore.prototype.close = function () {
-};
-
-MemoryStore.prototype.defaultError = throwErrorCallback;
-
-/** Identifies the underlying mechanism used by the store.
-*/
-MemoryStore.prototype.mechanism = "memory";
-
-
-/** MemoryStore (see {@link MemoryStore}) */
-module.exports = MemoryStore;
-},{"./../odatajs.js":11}]},{},[1]);
+    window.odatajs = {};
+    init.call(this, window.odatajs, window.odatajs, require);
+})();
