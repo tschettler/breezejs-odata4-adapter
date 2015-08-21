@@ -199,15 +199,15 @@
         }
 
         function getEntityType(schema, shortName) {
-            var thisEntity = schema.entityType.find(function (entity) {
+            var thisEntityType = core.arrayFirst(schema.entityType, function (entity) {
                 return entity.name == shortName;
             });
 
-            return thisEntity;
+            return thisEntityType;
         }
 
         function getResourceFromEntityName(schema, entityTypeName) {
-            var thisEntity = schema.entityContainer.entitySet.find(function (entity) {
+            var thisEntity = core.arrayFirst(schema.entityContainer.entitySet, function (entity) {
                 return entity.entityType == entityTypeName;
             });
 

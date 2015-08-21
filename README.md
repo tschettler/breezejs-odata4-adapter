@@ -7,8 +7,7 @@ This is an experimental adapter to allow [BreezeJS](http://www.getbreezenow.com/
 The current adapter for OData is designed to work with up to version 3 of the OData protocol. I am currently working of an application that requires me to communicate with a server using OData v4.
 At the same time I want to use Breeze, but with no official OData v4 adapter, I'm attempting to write my own.
 
-I am using the [Olingo OData client](http://olingo.apache.org/doc/javascript/index.html), which is the v4 successor to the [datajs](http://datajs.codeplex.com/) library that is currently used
-by Breeze (and only supports up to v3).
+I am using the [Olingo OData client](http://olingo.apache.org/doc/javascript/index.html), which is the v4 successor to the [datajs](http://datajs.codeplex.com/) library that is currently used by Breeze (and only supports up to v3).
 
 ## Caveat
 
@@ -32,18 +31,16 @@ Then in your app, configure Breeze to use this adapter:
 breeze.config.initializeAdapterInstance('dataService', 'ODataV4', true);
 ```
 
-The adapter also assumes that promises are available either because AngularJS has been included or the window.Q object exists. My app is an AngularJS so I am only testing it out
-in that context right now.
+The adapter also assumes that promises are available either because AngularJS has been included or the window.Q object exists.
 
-\* the `-mod` on the end of the filename indicates that I have also hacked this library (line 2089) in order to get batch requests to work. I'm not sure if this is due to a bug in
-the Olingo implementation of the protocol, or some oversight on my part in how to use the library.
+\* I have also updated this library with an IIFE at the end since the require global was being overwritten.
 
 ## Progress
 
 So far, in my limited testing, I have the following features working:
 - Metadata
 - Queries (`breeze.EntityQuery()`) with filtering (`where()`) and eager loading (`expand()`)
-- Batch inserts/updates (`entityManager.saveChanges()`)
+- Batch inserts/updates/deletes (`entityManager.saveChanges()`)
 
 But I have not tested these widely - my app is in its very early stages so there are probably many cases that will not work as expected.
 
