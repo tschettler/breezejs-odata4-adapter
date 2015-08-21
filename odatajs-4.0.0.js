@@ -8086,9 +8086,9 @@ exports.xmlSerializeDescendants = xmlSerializeDescendants;
 exports.xmlSiblingElement = xmlSiblingElement;
 }};
 
-var modules = {};
-
 (function() {
+    var modules = {};
+
     var require = function(path) {
         var name = path.substring(path.lastIndexOf('/') + 1, path.length - 3);
         if (modules[name]) {

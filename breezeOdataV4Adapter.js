@@ -39,6 +39,7 @@
     proto.initialize = function () {
         odatajs = core.requireLib('odatajs', 'Needed to support remote OData services');
         //odatajs.jsonHandler.recognizeDates = true;
+        fixODataFormats();
     };
     proto.headers = { 'OData-Version': '4.0' };
     proto.executeQuery = function (mappingContext) {
@@ -314,6 +315,7 @@
                 if (mappingContext.query) {
                     entityTypeName = mappingContext.entityManager.metadataStore.getEntityTypeNameForResourceName(mappingContext.query.resourceName);
                 } else {
+                    // convert from #Namespace.EntityType to EntityType:#Namespace
                     var nodeODataType = node['@odata.type'];
                     var typeParts = nodeODataType.split('.');
                     var typename = typeParts.pop();
@@ -512,6 +514,63 @@
     function getMessage(body) {
         var msg = body.message || body.Message || '';
         return ((typeof (msg) === 'string') ? msg : msg.value) + '; ';
+    }
+
+    function fixODataFormats() {
+        DataType.Int64.fmtOData = fmtFloatV4;
+        DataType.Decimal.fmtOData = fmtFloatV4;
+        DataType.Double.fmtOData = fmtFloatV4;
+        DataType.DateTime.fmtOData = fmtDateTimeV4;
+        DataType.DateTimeOffset.fmtOData = fmtDateTimeOffsetV4;
+        DataType.Time.fmtOData = fmtTimeV4;
+        DataType.Guid.fmtOData = fmtGuidV4;
+
+        function fmtFloatV4(val) {
+            if (val == null) return null;
+            if (typeof val === "string") {
+                val = parseFloat(val);
+            }
+            return val;
+        }
+
+        function fmtDateTimeV4(val) {
+            if (val == null) return null;
+            try {
+                return val.toISOString();
+            } catch (e) {
+                throwError("'%1' is not a valid dateTime", val);
+            }
+        }
+
+        function fmtDateTimeOffsetV4(val) {
+            if (val == null) return null;
+            try {
+                return val.toISOString();
+            } catch (e) {
+                throwError("'%1' is not a valid dateTime", val);
+            }
+        }
+
+        function fmtTimeV4(val) {
+            if (val == null) return null;
+            if (!core.isDuration(val)) {
+                throwError("'%1' is not a valid ISO 8601 duration", val);
+            }
+            return val;
+        }
+
+        function fmtGuidV4(val) {
+            if (val == null) return null;
+            if (!core.isGuid(val)) {
+                throwError("'%1' is not a valid guid", val);
+            }
+            return val;
+        }
+
+        function throwError(msg, val) {
+            msg = core.formatString(msg, val);
+            throw new Error(msg);
+        }
     }
 
     breeze.config.registerAdapter('dataService', webApiOData4Ctor);
