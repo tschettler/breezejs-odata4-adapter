@@ -53,6 +53,7 @@
          */
         url = url.replace('$inlinecount=allpages', '$count=true');
         url = url.replace('$inlinecount=none', '$count=false');
+        url = url.replace(/substringof\(('[^']*')(,|%2C)([^)]*)\)/gi, 'contains($3$2$1)');
 
         odatajs.oData.read({
             requestUri: url,
@@ -109,6 +110,7 @@
                     setIdentityProperties(schema[0]);
                     fillNavigationProperties(schema[0]);
                     setAssociations(schema[0]);
+                    processAnnotations(schema[0]);
 
                     metadata = schema[0];
                 }
@@ -147,7 +149,7 @@
         function fillNavigationProperties(schema) {
             var namespace = schema.namespace;
             schema.entityType.forEach(function (entType) {
-                entType.navigationProperty.forEach(function (navProp) {
+                (entType.navigationProperty || []).forEach(function (navProp) {
                     var navTypeIsSource = navProp.type.indexOf('Collection(') === 0;
                     var fullType = navProp.type.replace(/Collection\(([^)]*)\)/, '$1');
                     var shortType = fullType.split('.').pop();
@@ -215,6 +217,15 @@
             return thisEntity && thisEntity.name;
         }
 
+        function getProperty(entityType, propertyName) {
+            var properties = entityType.property.concat(entityType.navigationProperty);
+            var property = core.arrayFirst(properties, function(prop) {
+                return prop.name == propertyName;
+            });
+
+            return property;
+        }
+
         function getExistingAssoc(firstType, secondType) {
             return associations[firstType + '_' + secondType]
                 || associations[secondType + '_' + firstType];
@@ -232,6 +243,84 @@
 
             schema.association = assoc;
             schema.entityContainer.associationSet = assoc;
+        }
+
+        function processStoreGeneratedPatternAnnotation(property, annotation) {
+            property['annotation:StoreGeneratedPattern'] = annotation.string;
+        }
+
+        function processDisplayNameAnnotation(property, annotation) {
+            property.displayName = annotation.string;
+        }
+
+        function processValidatorAnnotation(property, annotation) {
+            property.validators = property.validators || [];
+
+            var keys = Object.keys(annotation);
+            var value = annotation[keys[1]]; // assuming value is second key
+            var nameAndProp = annotation.term.replace(/^.*Validator\./, '').split('.');
+            var name = nameAndProp.shift();
+            var prop = nameAndProp.shift();
+
+            var validator = core.arrayFirst(property.validators, function (val) {
+                return val.name == name;
+            });
+
+            if (!validator) {
+                validator = { name: name };
+                property.validators.push(validator);
+            }
+
+            var dataTypeMap = {
+                'int': DataType.Int64,
+                'decimal': DataType.Decimal,
+                'float': DataType.Double,
+                'date': DataType.Date,
+                'datetimeoffset': DataType.DateTimeOffset,
+                'string': DataType.String
+            };
+
+            var dataType = dataTypeMap[keys[1]] || dataTypeMap.string;
+            validator[prop] = dataType.parse(value, 'string');
+        }
+
+        function processAnnotations(schema) {
+            /// <summary>
+            /// Processes the annotations, currently only used for displayName and validators
+            /// </summary>
+            /// <param name="schema"></param>
+            var annotations = schema.annotations;
+            var processors = [
+                {
+                    annotation: 'StoreGeneratedPattern',
+                    process: processStoreGeneratedPatternAnnotation
+                },
+                {
+                    annotation: 'DisplayName',
+                    process: processDisplayNameAnnotation
+                },
+                {
+                    annotation: 'Validator',
+                    process: processValidatorAnnotation
+                }
+            ];
+
+            annotations.forEach(function (itemAnnotation) {
+                var targetSplit = itemAnnotation.target.split('/');
+                var entityTypeName = targetSplit[0];
+                var shortTypeName = entityTypeName.split('.').pop();
+                var propertyName = targetSplit[1];
+                var entityType = getEntityType(schema, shortTypeName);
+                var property = getProperty(entityType, propertyName);
+
+                itemAnnotation.annotation.forEach(function (annotation) { // term
+                    var processor = core.arrayFirst(processors, function (p) {
+                        return annotation.term.indexOf('.' + p.annotation) > -1;
+                    });
+
+                    processor.process(property, annotation);
+                });
+            });
         }
     };
 
