@@ -42,10 +42,25 @@
         fixODataFormats();
     };
     proto.headers = { 'OData-Version': '4.0' };
+
+    proto.getAbsoluteUrl = proto.getAbsoluteUrl || function (dataService, url) {
+        var serviceName = dataService.qualifyUrl('');
+        // only prefix with serviceName if not already on the url
+        var base = (core.stringStartsWith(url, serviceName)) ? '' : serviceName;
+        // If no protocol, turn base into an absolute URI
+        if (window && serviceName.indexOf('//') < 0) {
+            // no protocol; make it absolute
+            base = window.location.protocol + '//' + window.location.host +
+                  (core.stringStartsWith(serviceName, '/') ? '' : '/') +
+                  base;
+        }
+        return base + url;
+    };
+
     proto.executeQuery = function (mappingContext) {
 
         var deferred = Q.defer();
-        var url = mappingContext.getUrl();
+        var url = this.getAbsoluteUrl(mappingContext.dataService, mappingContext.getUrl());
 
         /**
          *  The syntax for getting the count of a collection has changed with v4
@@ -53,7 +68,7 @@
          */
         url = url.replace('$inlinecount=allpages', '$count=true');
         url = url.replace('$inlinecount=none', '$count=false');
-        url = url.replace(/substringof\(('[^']*')(,|%2C)([^)]*)\)/gi, 'contains($3$2$1)');
+        url = url.replace(/substringof\(('[^']*')(,|%2C)\s*([^)]*\)?)\)/gi, 'contains($3$2$1)');
 
         odatajs.oData.read({
             requestUri: url,
@@ -82,7 +97,8 @@
         var associations = {};
 
         var serviceName = dataService.serviceName;
-        var url = dataService.qualifyUrl('$metadata');
+        var url = this.getAbsoluteUrl(dataService, '$metadata');
+
         // OData.read(url,
         odatajs.oData.read({
             requestUri: url,
@@ -327,8 +343,8 @@
     proto.saveChanges = function (saveContext, saveBundle) {
         var adapter = saveContext.adapter = this;
         var deferred = Q.defer();
-        saveContext.routePrefix = adapter.getRoutePrefix(saveContext.dataService);
-        var url = saveContext.dataService.qualifyUrl('$batch');
+        saveContext.routePrefix = adapter.getAbsoluteUrl(saveContext.dataService, '');
+        var url = saveContext.routePrefix + '$batch';
 
         var requestData = createChangeRequests(saveContext, saveBundle);
         var tempKeys = saveContext.tempKeys;
