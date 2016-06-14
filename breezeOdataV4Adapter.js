@@ -172,9 +172,18 @@
 
                     var sourceType = navTypeIsSource ? shortType : entType.name;
                     var targetType = navTypeIsSource ? entType.name : shortType;
-
+                    
                     var assoc = getExistingAssoc(sourceType, targetType);
                     if (!assoc) {
+                        var targetKey = getEntityType(schema, targetType).key.propertyRef;
+                        var sourceKey = targetKey;
+
+                        var constraint = (navProp.referentialConstraint || [])[0];
+                        if (constraint) {
+                            sourceKey = [{ name: constraint.property }];
+                            targetKey = [{ name: constraint.referencedProperty }];
+                        }
+
                         var name = sourceType + '_' + targetType;
                         assoc = {
                             association: name,
@@ -195,11 +204,11 @@
                             ],
                             referentialConstraint: {
                                 dependent: {
-                                    propertyRef: getEntityType(schema, targetType).key.propertyRef,
+                                    propertyRef: sourceKey,
                                     role: name + '_Source'
                                 },
                                 principal: {
-                                    propertyRef: getEntityType(schema, targetType).key.propertyRef,
+                                    propertyRef: targetKey,
                                     role: name + '_Target'
                                 }
                             }
@@ -305,7 +314,7 @@
             /// Processes the annotations, currently only used for displayName and validators
             /// </summary>
             /// <param name="schema"></param>
-            var annotations = schema.annotations;
+            var annotations = schema.annotations || [];
             var processors = [
                 {
                     annotation: 'StoreGeneratedPattern',
