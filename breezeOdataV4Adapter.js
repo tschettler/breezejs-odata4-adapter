@@ -243,6 +243,10 @@
         }
 
         function getProperty(entityType, propertyName) {
+            if (!propertyName) {
+                return null;
+            }
+
             var properties = entityType.property.concat(entityType.navigationProperty);
             var property = core.arrayFirst(properties, function(prop) {
                 return prop.name == propertyName;
@@ -288,7 +292,7 @@
             var prop = nameAndProp.shift();
 
             var validator = core.arrayFirst(property.validators, function (val) {
-                return val.name == name;
+                return val.name === name;
             });
 
             if (!validator) {
@@ -296,17 +300,28 @@
                 property.validators.push(validator);
             }
 
+            var dataType = getDataType(keys[1]);
+            validator[prop] = dataType.parse(value, 'string');
+        }
+
+        function getDataType(key) {
             var dataTypeMap = {
-                'int': DataType.Int64,
-                'decimal': DataType.Decimal,
-                'float': DataType.Double,
-                'date': DataType.Date,
+                'binary': DataType.Binary,
+                'bool': DataType.Boolean,
+                'date': DataType.DateTime,
                 'datetimeoffset': DataType.DateTimeOffset,
+                'decimal': DataType.Decimal,
+                // duration?
+                // enumMember?
+                'float': DataType.Double,
+                'guid': DataType.Guid,
+                'int': DataType.Int64,
                 'string': DataType.String
+                // timeOfDay?
             };
 
-            var dataType = dataTypeMap[keys[1]] || dataTypeMap.string;
-            validator[prop] = dataType.parse(value, 'string');
+            var dataType = dataTypeMap[key] || dataTypeMap.string;
+            return dataType; 
         }
 
         function processAnnotations(schema) {
@@ -343,7 +358,7 @@
                         return annotation.term.indexOf('.' + p.annotation) > -1;
                     });
 
-                    processor.process(property, annotation);
+                    processor.process(property || entityType, annotation);
                 });
             });
         }
