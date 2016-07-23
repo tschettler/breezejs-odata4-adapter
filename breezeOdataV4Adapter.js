@@ -173,8 +173,9 @@
                     var sourceType = navTypeIsSource ? shortType : entType.name;
                     var targetType = navTypeIsSource ? entType.name : shortType;
                     
+                    var assocName = sourceType + '_' + targetType;
                     var assoc = getExistingAssoc(sourceType, targetType);
-                    if (!assoc) {
+                    if (!(navTypeIsSource || assoc)) {
                         var targetKey = getEntityType(schema, targetType).key.propertyRef;
                         var sourceKey = targetKey;
 
@@ -184,32 +185,31 @@
                             targetKey = [{ name: constraint.referencedProperty }];
                         }
 
-                        var name = sourceType + '_' + targetType;
                         assoc = {
-                            association: name,
-                            name: name,
+                            association: assocName,
+                            name: assocName,
                             end: [
                                 {
                                     entitySet: getResourceFromEntityName(schema, namespace + '.' + sourceType),
                                     multiplicity: '*',
-                                    role: name + '_Source',
+                                    role: assocName + '_Source',
                                     type: namespace + '.' + sourceType
                                 },
                                 {
                                     entitySet: getResourceFromEntityName(schema, namespace + '.' + targetType),
                                     multiplicity: '1',
-                                    role: name + '_Target',
+                                    role: assocName + '_Target',
                                     type: namespace + '.' + targetType
                                 }
                             ],
                             referentialConstraint: {
                                 dependent: {
                                     propertyRef: sourceKey,
-                                    role: name + '_Source'
+                                    role: assocName + '_Source'
                                 },
                                 principal: {
                                     propertyRef: targetKey,
-                                    role: name + '_Target'
+                                    role: assocName + '_Target'
                                 }
                             }
                         };
@@ -218,9 +218,9 @@
                     }
 
                     var isSource = !navTypeIsSource;
-                    navProp.relationship = namespace + '.' + assoc.name;
-                    navProp.toRole = assoc.name + (isSource ? '_Target' : '_Source');
-                    navProp.fromRole = assoc.name + (isSource ? '_Source' : '_Target');
+                    navProp.relationship = namespace + '.' + assocName;
+                    navProp.toRole = assocName + (isSource ? '_Target' : '_Source');
+                    navProp.fromRole = assocName + (isSource ? '_Source' : '_Target');
 
                 });
             });
