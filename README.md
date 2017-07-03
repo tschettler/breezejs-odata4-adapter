@@ -1,3 +1,6 @@
+# Moving on to TypeScript
+This project has been converted to TypeScript, please see [breeze-odata4](https://github.com/tschettler/breeze-odata4) for the TypeScript version of this adapter that I'm currently working on.
+
 # BreezeJS OData v4 Adapter
 
 This is an experimental adapter to allow [BreezeJS](http://www.getbreezenow.com/) to communicate with a server that is using version 4 of the OData protocol.
